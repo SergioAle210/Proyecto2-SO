@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox
 from scheduler.utils import leer_procesos, calcular_metricas
 from scheduler.fifo import fifo
 from scheduler.sjf import sjf
+from scheduler.round_robin import round_robin
 from tkinter import ttk
 
 import time
@@ -19,11 +20,22 @@ class SimuladorGUI:
             root, text="Cargar Procesos", command=self.cargar_procesos
         )
 
-        self.algoritmos = {"FIFO": fifo, "SJF": sjf}
+        self.algoritmos = {"FIFO": fifo, "SJF": sjf, "Round Robin": round_robin}
         self.algoritmo_var = tk.StringVar()
         self.algoritmo_selector = ttk.Combobox(
             root, textvariable=self.algoritmo_var, values=list(self.algoritmos.keys())
         )
+
+        self.quantum_frame = tk.Frame(root)
+        self.quantum_label = tk.Label(self.quantum_frame, text="Quantum:")
+        self.quantum_label.pack(side="left")
+        self.quantum_entry = tk.Entry(self.quantum_frame, width=5)
+        self.quantum_entry.pack(side="left")
+        self.quantum_frame.pack(pady=5)
+        self.quantum_frame.pack_forget()  # Oculto por defecto
+
+        self.algoritmo_selector.bind("<<ComboboxSelected>>", self.actualizar_vista)
+
         self.algoritmo_selector.set("FIFO")  # Valor por defecto
         self.algoritmo_selector.pack(pady=10)
 
@@ -63,6 +75,21 @@ class SimuladorGUI:
 
         self.canvas.delete("all")
         algoritmo_funcion = self.algoritmos[algoritmo_nombre]
+
+        if algoritmo_nombre == "Round Robin":
+            try:
+                quantum = int(self.quantum_entry.get())
+                if quantum <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror(
+                    "Error", "Quantum inválido. Ingresa un número entero mayor a 0."
+                )
+                return
+            procesos_resultado = algoritmo_funcion(self.procesos, quantum)
+        else:
+            procesos_resultado = algoritmo_funcion(self.procesos)
+
         procesos_resultado = algoritmo_funcion(self.procesos)
         self.dibujar_gantt(procesos_resultado)
 
@@ -91,3 +118,10 @@ class SimuladorGUI:
                 time.sleep(0.2)
 
         self.canvas.create_text(x, 80, text=str(procesos[-1].end_time), anchor="n")
+
+    def actualizar_vista(self, event):
+        algoritmo = self.algoritmo_var.get()
+        if algoritmo == "Round Robin":
+            self.quantum_frame.pack(pady=5)
+        else:
+            self.quantum_frame.pack_forget()
