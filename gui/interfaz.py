@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from scheduler.utils import leer_procesos
+from scheduler.utils import leer_procesos, calcular_metricas
 from scheduler.fifo import fifo
 
 import time
@@ -49,6 +49,13 @@ class SimuladorGUI:
         self.canvas.delete("all")
         resultado = fifo(self.procesos)
         self.dibujar_gantt(resultado)
+
+        avg_wt, avg_tat = calcular_metricas(resultado)
+        messagebox.showinfo(
+            "Métricas FIFO",
+            f"Tiempo de Espera Promedio: {avg_wt:.2f} ciclos\n"
+            f"Turnaround Time Promedio: {avg_tat:.2f} ciclos",
+        )
 
     def dibujar_gantt(self, procesos):
         escala = 30
