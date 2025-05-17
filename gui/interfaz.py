@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from scheduler.utils import leer_procesos, calcular_metricas
 from scheduler.fifo import fifo
+from scheduler.sjf import sjf
+from tkinter import ttk
 
 import time
 
@@ -16,11 +18,18 @@ class SimuladorGUI:
         self.boton_cargar = tk.Button(
             root, text="Cargar Procesos", command=self.cargar_procesos
         )
+
+        self.algoritmos = {"FIFO": fifo, "SJF": sjf}
+        self.algoritmo_var = tk.StringVar()
+        self.algoritmo_selector = ttk.Combobox(
+            root, textvariable=self.algoritmo_var, values=list(self.algoritmos.keys())
+        )
+        self.algoritmo_selector.set("FIFO")  # Valor por defecto
+        self.algoritmo_selector.pack(pady=10)
+
         self.boton_cargar.pack(pady=10)
 
-        self.boton_simular = tk.Button(
-            root, text="Simular FIFO", command=self.simular_fifo
-        )
+        self.boton_simular = tk.Button(root, text="Simular", command=self.simular)
         self.boton_simular.pack(pady=10)
 
         self.canvas = tk.Canvas(
@@ -42,17 +51,24 @@ class SimuladorGUI:
                 "Carga Exitosa", f"Se cargaron {len(self.procesos)} procesos."
             )
 
-    def simular_fifo(self):
+    def simular(self):
         if not self.procesos:
             messagebox.showwarning("Error", "Primero carga un archivo de procesos.")
             return
-        self.canvas.delete("all")
-        resultado = fifo(self.procesos)
-        self.dibujar_gantt(resultado)
 
-        avg_wt, avg_tat = calcular_metricas(resultado)
+        algoritmo_nombre = self.algoritmo_var.get()
+        if algoritmo_nombre not in self.algoritmos:
+            messagebox.showerror("Error", "Selecciona un algoritmo válido.")
+            return
+
+        self.canvas.delete("all")
+        algoritmo_funcion = self.algoritmos[algoritmo_nombre]
+        procesos_resultado = algoritmo_funcion(self.procesos)
+        self.dibujar_gantt(procesos_resultado)
+
+        avg_wt, avg_tat = calcular_metricas(procesos_resultado)
         messagebox.showinfo(
-            "Métricas FIFO",
+            f"Métricas - {algoritmo_nombre}",
             f"Tiempo de Espera Promedio: {avg_wt:.2f} ciclos\n"
             f"Turnaround Time Promedio: {avg_tat:.2f} ciclos",
         )
