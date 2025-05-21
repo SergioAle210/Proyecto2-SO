@@ -1,26 +1,18 @@
-class Proceso:
-    def __init__(self, pid, bt, at, priority):
-        self.pid = pid
-        self.bt = int(bt)
-        self.at = int(at)
-        self.priority = int(priority)
-        self.remaining = int(bt)
-        self.start_time = None
-        self.end_time = None
-        self.first_run = True
-
-
 def round_robin(procesos, quantum):
+    """
+    Algoritmo Round Robin (RR).
+    Usa un quantum fijo para repartir tiempo de CPU de forma equitativa.
+    """
     procesos = sorted(procesos, key=lambda p: p.at)
     tiempo = 0
     queue = []
     completados = 0
-    resultado = []
     n = len(procesos)
+    resultado = []
     index = 0
 
     while completados < n:
-        # Agregar procesos que ya llegaron
+        # Agregar procesos que hayan llegado al tiempo actual
         while index < n and procesos[index].at <= tiempo:
             queue.append(procesos[index])
             index += 1
@@ -48,6 +40,7 @@ def round_robin(procesos, quantum):
             queue.append(actual)
         else:
             actual.end_time = tiempo
+            actual.finished = True
             resultado.append(actual)
             completados += 1
 
