@@ -115,18 +115,25 @@ class SimuladorGUI:
         self.quantum_frame.pack(pady=5)
         self.quantum_frame.pack_forget()
 
+        self.botones_frame = tk.Frame(self.control_panel)
+        self.botones_frame.pack(pady=10)
+
+        boton_style = {"width": 18, "padding": 6}
+
         self.boton_cargar = ttk.Button(
-            self.control_panel, text="Cargar Procesos", command=self.cargar_procesos
+            self.botones_frame, text="Cargar Procesos", command=self.cargar_procesos
         )
-        self.boton_cargar.pack(pady=5)
+        self.boton_cargar.grid(row=0, column=0, padx=5)
+
         self.boton_simular = ttk.Button(
-            self.control_panel, text="Simular", command=self.simular
+            self.botones_frame, text="Simular", command=self.simular
         )
-        self.boton_simular.pack(pady=5)
+        self.boton_simular.grid(row=0, column=1, padx=5)
+
         self.boton_limpiar = ttk.Button(
-            self.control_panel, text="Limpiar Procesos", command=self.limpiar_procesos
+            self.botones_frame, text="Limpiar Procesos", command=self.limpiar_procesos
         )
-        self.boton_limpiar.pack(pady=5)
+        self.boton_limpiar.grid(row=0, column=2, padx=5)
 
         # Frame de métricas debajo de los botones
         self.metricas_frame = tk.Frame(self.control_panel)
