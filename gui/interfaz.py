@@ -24,42 +24,38 @@ class SimuladorGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Simulador de Sistemas Operativos - UVG 2025")
-        self.root.geometry("1100x750")
-        self.root.configure(bg="#1e1e1e")
+        self.root.geometry("1200x800")
+
         self.procesos = []
         self.recursos = {}
         self.acciones = []
         self.colors = {}
 
-        self.style = ttk.Style()
-        self.style.configure("TButton", font=("Arial", 11), foreground="white")
-        self.style.configure("Black.TButton", font=("Arial", 11), foreground="black")
-        self.style.configure("TLabel", font=("Arial", 11), foreground="white")
-        self.style.configure("TRadiobutton", background="#1e1e1e", foreground="white")
-        self.style.configure("TCheckbutton", background="#1e1e1e", foreground="white")
-
-        container = tk.Frame(self.root, bg="#1e1e1e")
-        container.pack(fill="both", expand=True, padx=20, pady=20)
-
         self.modo_var = tk.StringVar(value="calendarizacion")
-        self.top_frame = tk.Frame(container, bg="#1e1e1e")
+
+        # Estilo visual general
+        self.style = ttk.Style()
+        self.style.configure("TButton", font=("Arial", 10))
+        self.style.configure("TLabel", font=("Arial", 10))
+
+        container = tk.Frame(self.root)
+        container.pack(fill="both", expand=True, padx=10, pady=10)
+
+        self.top_frame = tk.Frame(container)
         self.top_frame.pack(fill="x")
 
-        self.left_panel = tk.Frame(self.top_frame, bg="#1e1e1e")
-        self.left_panel.pack(side="left", fill="y", padx=20)
+        self.left_panel = tk.Frame(self.top_frame)
+        self.left_panel.pack(side="left", fill="y", padx=10)
 
-        self.control_panel = tk.Frame(self.top_frame, bg="#1e1e1e")
+        self.control_panel = tk.Frame(self.top_frame)
         self.control_panel.pack(side="left", fill="y", expand=True)
 
-        self.canvas_frame = tk.Frame(container, bg="#1e1e1e")
+        self.canvas_frame = tk.Frame(container)
         self.canvas_frame.pack(fill="both", expand=True, pady=10)
 
+        # Modo de simulación
         tk.Label(
-            self.left_panel,
-            text="Modo de Simulación:",
-            bg="#1e1e1e",
-            fg="white",
-            font=("Arial", 12, "bold"),
+            self.left_panel, text="Modo de Simulación:", font=("Arial", 12, "bold")
         ).pack(pady=5)
         ttk.Radiobutton(
             self.left_panel,
@@ -76,14 +72,9 @@ class SimuladorGUI:
             command=self.actualizar_modo,
         ).pack(anchor="w")
 
-        self.sync_selector = tk.Frame(self.left_panel, bg="#1e1e1e")
+        self.sync_selector = tk.Frame(self.left_panel)
         self.sync_tipo = tk.StringVar(value="mutex")
-        ttk.Label(
-            self.sync_selector,
-            text="Tipo de sincronización:",
-            background="#1e1e1e",
-            foreground="white",
-        ).pack(pady=5)
+        ttk.Label(self.sync_selector, text="Tipo de sincronización:").pack(pady=5)
         ttk.Radiobutton(
             self.sync_selector, text="Mutex", variable=self.sync_tipo, value="mutex"
         ).pack(anchor="w")
@@ -102,13 +93,11 @@ class SimuladorGUI:
             "Priority": priority,
         }
 
-        self.simulacion_frame = tk.Frame(self.left_panel, bg="#1e1e1e")
+        self.simulacion_frame = tk.Frame(self.left_panel)
         tk.Label(
             self.simulacion_frame,
             text="Seleccione uno o más algoritmos:",
-            bg="#1e1e1e",
-            fg="white",
-            font=("Arial", 12),
+            font=("Arial", 11),
         ).pack(pady=5)
         self.algoritmo_vars = {}
         for nombre in self.algoritmos:
@@ -119,12 +108,10 @@ class SimuladorGUI:
                 text=nombre,
                 variable=var,
                 command=self.actualizar_vista,
-            ).pack(anchor="w", padx=20)
+            ).pack(anchor="w", padx=10)
 
-        self.quantum_frame = tk.Frame(self.simulacion_frame, bg="#1e1e1e")
-        self.quantum_label = tk.Label(
-            self.quantum_frame, text="Quantum:", bg="#1e1e1e", fg="white"
-        )
+        self.quantum_frame = tk.Frame(self.simulacion_frame)
+        self.quantum_label = tk.Label(self.quantum_frame, text="Quantum:")
         self.quantum_label.pack(side="left")
         self.quantum_entry = tk.Entry(self.quantum_frame, width=5)
         self.quantum_entry.insert(0, "3")
@@ -133,36 +120,91 @@ class SimuladorGUI:
         self.quantum_frame.pack_forget()
 
         self.boton_cargar = ttk.Button(
-            self.control_panel,
-            text="Cargar Procesos",
-            command=self.cargar_procesos,
-            style="Black.TButton",
+            self.control_panel, text="Cargar Procesos", command=self.cargar_procesos
         )
         self.boton_cargar.pack(pady=5)
         self.boton_simular = ttk.Button(
-            self.control_panel,
-            text="Simular",
-            command=self.simular,
-            style="Black.TButton",
+            self.control_panel, text="Simular", command=self.simular
         )
         self.boton_simular.pack(pady=5)
         self.boton_limpiar = ttk.Button(
-            self.control_panel,
-            text="Limpiar Procesos",
-            command=self.limpiar_procesos,
-            style="Black.TButton",
+            self.control_panel, text="Limpiar Procesos", command=self.limpiar_procesos
         )
         self.boton_limpiar.pack(pady=5)
 
+        # Canvas con scroll horizontal y vertical
         self.canvas = tk.Canvas(
-            self.canvas_frame, height=200, bg="white", scrollregion=(0, 0, 5000, 200)
+            self.canvas_frame, bg="white", scrollregion=(0, 0, 5000, 2000)
         )
         self.canvas.pack(side="left", fill="both", expand=True)
+
         self.scroll_x = tk.Scrollbar(
             self.canvas_frame, orient="horizontal", command=self.canvas.xview
         )
         self.scroll_x.pack(side="bottom", fill="x")
-        self.canvas.config(xscrollcommand=self.scroll_x.set)
+
+        self.scroll_y = tk.Scrollbar(
+            self.canvas_frame, orient="vertical", command=self.canvas.yview
+        )
+        self.scroll_y.pack(side="right", fill="y")
+
+        self.canvas.config(
+            xscrollcommand=self.scroll_x.set, yscrollcommand=self.scroll_y.set
+        )
+
+        self.leyenda_frame = tk.Frame(container)
+        self.leyenda_frame.pack(fill="x", pady=5)
+
+        # Contenedor general para todo el bloque inferior
+        self.tabla_frame = tk.Frame(container)
+        self.tabla_frame.pack(fill="x", pady=10)
+
+        # Contenedor horizontal para las 3 tablas
+        self.tablas_contenedor = tk.Frame(self.tabla_frame)
+        self.tablas_contenedor.pack(fill="x")
+
+        # Subcontenedor por tabla con etiqueta y texto (procesos)
+        self.frame_procesos = tk.Frame(self.tablas_contenedor)
+        self.frame_procesos.pack(side="left", padx=10, fill="y")
+        tk.Label(
+            self.frame_procesos, text="Procesos", font=("Arial", 10, "bold")
+        ).pack()
+        self.tabla_procesos = tk.Text(
+            self.frame_procesos, height=6, width=40, bg="#f4f4f4"
+        )
+        self.tabla_procesos.pack()
+
+        # Subcontenedor por tabla con etiqueta y texto (recursos)
+        self.frame_recursos = tk.Frame(self.tablas_contenedor)
+        self.frame_recursos.pack(side="left", padx=10, fill="y")
+        tk.Label(
+            self.frame_recursos, text="Recursos", font=("Arial", 10, "bold")
+        ).pack()
+        self.tabla_recursos = tk.Text(
+            self.frame_recursos, height=6, width=40, bg="#f4f4f4"
+        )
+        self.tabla_recursos.pack()
+
+        # Subcontenedor por tabla con etiqueta y texto (acciones)
+        self.frame_acciones = tk.Frame(self.tablas_contenedor)
+        self.frame_acciones.pack(side="left", padx=10, fill="y")
+        tk.Label(
+            self.frame_acciones, text="Acciones", font=("Arial", 10, "bold")
+        ).pack()
+        self.tabla_acciones = tk.Text(
+            self.frame_acciones, height=6, width=40, bg="#f4f4f4"
+        )
+        self.tabla_acciones.pack()
+
+        # Ocultar recursos y acciones al iniciar
+        self.frame_recursos.pack_forget()
+        self.frame_acciones.pack_forget()
+
+        # Métricas debajo
+        self.metricas_label = tk.Label(
+            self.tabla_frame, text="", font=("Arial", 10), justify="left"
+        )
+        self.metricas_label.pack(fill="x", pady=5)
 
         self.actualizar_modo()
 
@@ -171,9 +213,13 @@ class SimuladorGUI:
         if modo == "calendarizacion":
             self.simulacion_frame.pack(fill="x", pady=10)
             self.sync_selector.pack_forget()
+            self.frame_acciones.pack_forget()
+            self.frame_recursos.pack_forget()
         else:
             self.simulacion_frame.pack_forget()
             self.sync_selector.pack(fill="x", pady=10)
+            self.frame_acciones.pack(side="left", padx=10)
+            self.frame_recursos.pack(side="left", padx=10)
 
     def actualizar_vista(self):
         if self.algoritmo_vars["Round Robin"].get():
@@ -186,23 +232,61 @@ class SimuladorGUI:
         archivo = filedialog.askopenfilename(filetypes=[("Archivos TXT", "*.txt")])
         if not archivo:
             return
-        if modo == "calendarizacion":
-            self.procesos = leer_procesos(archivo)
-        else:
-            if "procesos" in archivo:
-                self.procesos = leer_procesos_sync(archivo)
-            elif "recursos" in archivo:
-                self.recursos = leer_recursos(archivo)
-            elif "acciones" in archivo:
-                self.acciones = leer_acciones(archivo)
+        contenido = []
+        try:
+            if modo == "calendarizacion":
+                self.procesos = leer_procesos(archivo)
+                contenido = [
+                    f"{p.pid}, {p.bt}, {p.at}, {p.priority}" for p in self.procesos
+                ]
+                self.tabla_procesos.delete("1.0", tk.END)
+                self.tabla_procesos.insert(tk.END, "\n".join(contenido))
+            else:
+                if "procesos" in archivo:
+                    self.procesos = leer_procesos_sync(archivo)
+                    contenido = [
+                        f"{p.pid}, {p.bt}, {p.at}, {p.priority}" for p in self.procesos
+                    ]
+                    self.tabla_procesos.delete("1.0", tk.END)
+                    self.tabla_procesos.insert(tk.END, "\n".join(contenido))
+                elif "recursos" in archivo:
+                    self.recursos = leer_recursos(archivo)
+                    contenido = [
+                        f"{r.nombre}, {r.contador}" for r in self.recursos.values()
+                    ]
+                    self.tabla_recursos.delete("1.0", tk.END)
+                    self.tabla_recursos.insert(tk.END, "\n".join(contenido))
+                elif "acciones" in archivo:
+                    self.acciones = leer_acciones(archivo)
+                    contenido = [
+                        f"{a.pid}, {a.tipo}, {a.recurso}, {a.ciclo}"
+                        for a in self.acciones
+                    ]
+                    self.tabla_acciones.delete("1.0", tk.END)
+                    self.tabla_acciones.insert(tk.END, "\n".join(contenido))
+        except Exception as e:
+            messagebox.showerror(
+                "Error de lectura", f"Ocurrió un error al cargar el archivo:\n{e}"
+            )
+            return
+
         self.colors = {p.pid: self.generar_color() for p in self.procesos}
-        messagebox.showinfo("Éxito", "Archivo cargado correctamente.")
+        self.actualizar_leyenda()
 
     def limpiar_procesos(self):
         self.procesos = []
+        self.recursos = {}
+        self.acciones = []
         self.canvas.delete("all")
+        self.tabla_procesos.delete("1.0", tk.END)
+        self.tabla_recursos.delete("1.0", tk.END)
+        self.tabla_acciones.delete("1.0", tk.END)
+        self.metricas_label.config(text="")
+        for widget in self.leyenda_frame.winfo_children():
+            widget.destroy()
         messagebox.showinfo(
-            "Limpieza", "Los procesos han sido eliminados y el canvas ha sido limpiado."
+            "Limpieza",
+            "Se han limpiado los procesos, recursos, acciones, canvas y leyenda.",
         )
 
     def generar_color(self):
@@ -210,6 +294,7 @@ class SimuladorGUI:
 
     def simular(self):
         self.canvas.delete("all")
+        self.mostrar_metricas("", clear=True)
         modo = self.modo_var.get()
         if modo == "calendarizacion":
             if not self.procesos:
@@ -234,10 +319,10 @@ class SimuladorGUI:
                         resultado = funcion(deepcopy(self.procesos))
                     self.dibujar_gantt(resultado)
                     avg_wt, avg_tat = calcular_metricas(resultado)
-                    messagebox.showinfo(
-                        f"Métricas ({nombre})",
-                        f"Tiempo de Espera Promedio: {avg_wt:.2f} ciclos\nTurnaround Time Promedio: {avg_tat:.2f} ciclos",
+                    self.mostrar_metricas(
+                        f"{nombre}: Tiempo de Espera Promedio: {avg_wt:.2f} ciclos | Turnaround: {avg_tat:.2f} ciclos"
                     )
+
         else:
             if not self.procesos or not self.recursos or not self.acciones:
                 messagebox.showerror(
@@ -257,50 +342,105 @@ class SimuladorGUI:
     def dibujar_gantt(self, procesos):
         escala = 25
         x = 10
+        # Calcular desplazamiento vertical en función de los algoritmos ya dibujados
+        num_algoritmos_previos = self.metricas_label.cget("text").count("\n") + 1
+        y_offset = 40 + (num_algoritmos_previos - 1) * 100
+
         timeline = []
         for p in procesos:
             for t in range(p.start_time, p.end_time):
                 timeline.append((p.pid, t))
+
         for pid, ciclo in timeline:
             self.root.update()
             color = self.colors.get(pid, "#cccccc")
             self.canvas.create_rectangle(
-                x, 40, x + escala, 100, fill=color, outline="black"
+                x, y_offset, x + escala, y_offset + 60, fill=color, outline="black"
             )
-            self.canvas.create_text(x + escala // 2, 70, text=pid, font=("Arial", 9))
             self.canvas.create_text(
-                x, 110, text=str(ciclo), anchor="n", font=("Arial", 8)
+                x + escala // 2, y_offset + 30, text=pid, font=("Arial", 9)
+            )
+            self.canvas.create_text(
+                x, y_offset + 70, text=str(ciclo), anchor="n", font=("Arial", 8)
             )
             x += escala
             time.sleep(0.03)
+
         if timeline:
             self.canvas.create_text(
-                x, 110, text=str(timeline[-1][1] + 1), anchor="n", font=("Arial", 8)
+                x,
+                y_offset + 70,
+                text=str(timeline[-1][1] + 1),
+                anchor="n",
+                font=("Arial", 8),
             )
 
     def dibujar_sync(self, procesos):
         escala = 25
         x = 10
+        y_offset = 40  # Ajuste inicial de la posición vertical
+
+        # Limpiar canvas y definir scroll dinamico para sincronización
+        self.canvas.delete("all")
+        self.canvas.config(scrollregion=(0, 0, 5000, 2000))
+
         for p in procesos:
             for ciclo, estado in p.historial:
                 self.root.update()
                 color = "green" if estado == "ACCESSED" else "red"
                 self.canvas.create_rectangle(
-                    x, 40, x + escala, 100, fill=color, outline="black"
+                    x, y_offset, x + escala, y_offset + 60, fill=color, outline="black"
                 )
                 self.canvas.create_text(
-                    x + escala // 2, 70, text=p.pid, font=("Arial", 9)
+                    x + escala // 2, y_offset + 30, text=p.pid, font=("Arial", 9)
                 )
                 self.canvas.create_text(
-                    x, 110, text=str(ciclo), anchor="n", font=("Arial", 8)
+                    x, y_offset + 70, text=str(ciclo), anchor="n", font=("Arial", 8)
                 )
                 x += escala
-                time.sleep(0.03)
+                time.sleep(0.05)
+
         if procesos and procesos[0].historial:
             self.canvas.create_text(
                 x,
-                110,
+                y_offset + 70,
                 text=str(procesos[0].historial[-1][0] + 1),
                 anchor="n",
                 font=("Arial", 8),
             )
+
+    def mostrar_metricas(self, texto, clear=False):
+        if clear:
+            self.metricas_label.config(text="")
+        else:
+            actual = self.metricas_label.cget("text")
+            nuevo = actual + "\n" + texto if actual else texto
+            self.metricas_label.config(text=nuevo)
+
+    def actualizar_leyenda(self):
+        for widget in self.leyenda_frame.winfo_children():
+            widget.destroy()
+        for pid, color in self.colors.items():
+            cubo = tk.Frame(self.leyenda_frame, bg=color, width=20, height=20)
+            cubo.pack(side="left", padx=5, pady=5)
+            etiqueta = tk.Label(self.leyenda_frame, text=pid)
+            etiqueta.pack(side="left", padx=(0, 10))
+
+    def limpiar_procesos(self):
+        self.procesos = []
+        self.recursos = {}
+        self.acciones = []
+        self.canvas.delete("all")
+        self.tabla_procesos.delete("1.0", tk.END)
+        self.tabla_recursos.delete("1.0", tk.END)
+        self.tabla_acciones.delete("1.0", tk.END)
+        self.metricas_label.config(text="")
+
+        for widget in self.leyenda_frame.winfo_children():
+            widget.pack_forget()
+            widget.destroy()
+
+        messagebox.showinfo(
+            "Limpieza",
+            "Se han limpiado los procesos, recursos, acciones, canvas y leyenda.",
+        )
