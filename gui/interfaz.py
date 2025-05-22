@@ -317,7 +317,7 @@ class SimuladorGUI:
                         resultado = funcion(deepcopy(self.procesos), quantum)
                     else:
                         resultado = funcion(deepcopy(self.procesos))
-                    self.dibujar_gantt(resultado)
+                    self.dibujar_gantt(resultado, nombre)
                     avg_wt, avg_tat = calcular_metricas(resultado)
                     self.mostrar_metricas(
                         f"{nombre}: Tiempo de Espera Promedio: {avg_wt:.2f} ciclos | Turnaround: {avg_tat:.2f} ciclos"
@@ -339,12 +339,21 @@ class SimuladorGUI:
             resultado = simulador.ejecutar()
             self.dibujar_sync(resultado)
 
-    def dibujar_gantt(self, procesos):
+    def dibujar_gantt(self, procesos, nombre_algoritmo=""):
         escala = 25
         x = 10
         # Calcular desplazamiento vertical en función de los algoritmos ya dibujados
         num_algoritmos_previos = self.metricas_label.cget("text").count("\n") + 1
-        y_offset = 40 + (num_algoritmos_previos - 1) * 100
+        y_offset = self.canvas.bbox("all")[3] + 30 if self.canvas.bbox("all") else 40
+
+        if nombre_algoritmo:
+            self.canvas.create_text(
+                10,
+                y_offset - 20,
+                anchor="nw",
+                text=f"Algoritmo: {nombre_algoritmo}",
+                font=("Arial", 10, "bold"),
+            )
 
         timeline = []
         for p in procesos:
