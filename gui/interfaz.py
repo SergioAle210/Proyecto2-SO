@@ -33,7 +33,6 @@ class SimuladorGUI:
 
         self.modo_var = tk.StringVar(value="calendarizacion")
 
-        # Estilo visual general
         self.style = ttk.Style()
         self.style.configure("TButton", font=("Arial", 10))
         self.style.configure("TLabel", font=("Arial", 10))
@@ -49,9 +48,6 @@ class SimuladorGUI:
 
         self.control_panel = tk.Frame(self.top_frame)
         self.control_panel.pack(side="left", fill="y", expand=True)
-
-        self.canvas_frame = tk.Frame(container)
-        self.canvas_frame.pack(fill="both", expand=True, pady=10)
 
         # Modo de simulación
         tk.Label(
@@ -132,38 +128,43 @@ class SimuladorGUI:
         )
         self.boton_limpiar.pack(pady=5)
 
-        # Canvas con scroll horizontal y vertical
+        # Canvas con scroll horizontal y vertical bien posicionado
+        self.canvas_frame = tk.Frame(container)
+        self.canvas_frame.pack(fill="both", expand=True)
+
         self.canvas = tk.Canvas(
             self.canvas_frame, bg="white", scrollregion=(0, 0, 5000, 2000)
         )
-        self.canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
 
         self.scroll_x = tk.Scrollbar(
             self.canvas_frame, orient="horizontal", command=self.canvas.xview
         )
-        self.scroll_x.pack(side="bottom", fill="x")
+        self.scroll_x.grid(row=1, column=0, sticky="ew")
 
         self.scroll_y = tk.Scrollbar(
             self.canvas_frame, orient="vertical", command=self.canvas.yview
         )
-        self.scroll_y.pack(side="right", fill="y")
+        self.scroll_y.grid(row=0, column=1, sticky="ns")
 
         self.canvas.config(
             xscrollcommand=self.scroll_x.set, yscrollcommand=self.scroll_y.set
         )
 
+        self.canvas_frame.grid_rowconfigure(0, weight=1)
+        self.canvas_frame.grid_columnconfigure(0, weight=1)
+
+        # Leyenda de colores
         self.leyenda_frame = tk.Frame(container)
         self.leyenda_frame.pack(fill="x", pady=5)
 
-        # Contenedor general para todo el bloque inferior
+        # Tabla de resumen
         self.tabla_frame = tk.Frame(container)
         self.tabla_frame.pack(fill="x", pady=10)
 
-        # Contenedor horizontal para las 3 tablas
         self.tablas_contenedor = tk.Frame(self.tabla_frame)
         self.tablas_contenedor.pack(fill="x")
 
-        # Subcontenedor por tabla con etiqueta y texto (procesos)
         self.frame_procesos = tk.Frame(self.tablas_contenedor)
         self.frame_procesos.pack(side="left", padx=10, fill="y")
         tk.Label(
@@ -174,7 +175,6 @@ class SimuladorGUI:
         )
         self.tabla_procesos.pack()
 
-        # Subcontenedor por tabla con etiqueta y texto (recursos)
         self.frame_recursos = tk.Frame(self.tablas_contenedor)
         self.frame_recursos.pack(side="left", padx=10, fill="y")
         tk.Label(
@@ -185,7 +185,6 @@ class SimuladorGUI:
         )
         self.tabla_recursos.pack()
 
-        # Subcontenedor por tabla con etiqueta y texto (acciones)
         self.frame_acciones = tk.Frame(self.tablas_contenedor)
         self.frame_acciones.pack(side="left", padx=10, fill="y")
         tk.Label(
@@ -196,15 +195,14 @@ class SimuladorGUI:
         )
         self.tabla_acciones.pack()
 
-        # Ocultar recursos y acciones al iniciar
         self.frame_recursos.pack_forget()
         self.frame_acciones.pack_forget()
 
-        # Métricas debajo
+        # Métricas (fuera del área de canvas)
         self.metricas_label = tk.Label(
-            self.tabla_frame, text="", font=("Arial", 10), justify="left"
+            container, text="", font=("Arial", 10), justify="left", anchor="w"
         )
-        self.metricas_label.pack(fill="x", pady=5)
+        self.metricas_label.pack(fill="x", pady=(5, 0))
 
         self.actualizar_modo()
 
@@ -387,11 +385,7 @@ class SimuladorGUI:
     def dibujar_sync(self, procesos):
         escala = 25
         x = 10
-        y_offset = 40  # Ajuste inicial de la posición vertical
-
-        # Limpiar canvas y definir scroll dinamico para sincronización
-        self.canvas.delete("all")
-        self.canvas.config(scrollregion=(0, 0, 5000, 2000))
+        y_offset = self.canvas.bbox("all")[3] + 30 if self.canvas.bbox("all") else 40
 
         for p in procesos:
             for ciclo, estado in p.historial:
