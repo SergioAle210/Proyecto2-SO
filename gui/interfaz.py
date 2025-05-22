@@ -199,10 +199,28 @@ class SimuladorGUI:
         self.frame_acciones.pack_forget()
 
         # Métricas (fuera del área de canvas)
-        self.metricas_label = tk.Label(
+        self.metricas_frame = tk.Label(
             container, text="", font=("Arial", 10), justify="left", anchor="w"
         )
-        self.metricas_label.pack(fill="x", pady=(5, 0))
+        self.metricas_frame.pack(fill="x", pady=(5, 0))
+
+        tk.Label(
+            self.metricas_frame,
+            text="Métricas de Algoritmos de Calendarización",
+            font=("Arial", 11, "bold"),
+            bg="#f4f4f4",
+            anchor="w",
+        ).pack(fill="x", padx=10, pady=(5, 0))
+
+        self.metricas_label = tk.Label(
+            self.metricas_frame,
+            text="",
+            font=("Courier New", 10),
+            justify="left",
+            bg="#f4f4f4",
+            anchor="w",
+        )
+        self.metricas_label.pack(fill="x", padx=15, pady=5)
 
         self.actualizar_modo()
 
