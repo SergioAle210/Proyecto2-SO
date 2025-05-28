@@ -1,42 +1,34 @@
 def round_robin(procesos, quantum):
-    """
-    Algoritmo Round Robin (RR).
-    Usa un quantum fijo para repartir tiempo de CPU de forma equitativa.
-    """
     procesos = sorted(procesos, key=lambda p: p.at)
-    tiempo = 0
-    queue = []
-    completados = 0
-    n = len(procesos)
-    resultado = []
-    index = 0
+    tiempo, index, completados, n = 0, 0, 0, len(procesos)
+    queue, resultado, timeline = [], [], []
 
     while completados < n:
-        # Agregar procesos que hayan llegado al tiempo actual
         while index < n and procesos[index].at <= tiempo:
             queue.append(procesos[index])
             index += 1
-
         if not queue:
             tiempo += 1
             continue
 
         actual = queue.pop(0)
-
         if actual.first_run:
             actual.start_time = tiempo
             actual.first_run = False
 
-        ejecutar = min(quantum, actual.remaining)
-        tiempo += ejecutar
-        actual.remaining -= ejecutar
+        run = min(quantum, actual.remaining)
 
-        # Agregar nuevos procesos que hayan llegado durante la ejecución
+        timeline.extend((actual.pid, t) for t in range(tiempo, tiempo + run))
+        actual.timeline.append((tiempo, run))
+
+        tiempo += run
+        actual.remaining -= run
+
         while index < n and procesos[index].at <= tiempo:
             queue.append(procesos[index])
             index += 1
 
-        if actual.remaining > 0:
+        if actual.remaining:
             queue.append(actual)
         else:
             actual.end_time = tiempo
@@ -44,4 +36,4 @@ def round_robin(procesos, quantum):
             resultado.append(actual)
             completados += 1
 
-    return resultado
+    return resultado, timeline
