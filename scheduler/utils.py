@@ -7,6 +7,7 @@ class Proceso:
         self.bt = int(bt)  # Burst Time
         self.at = int(at)  # Arrival Time
         self.priority = int(priority)  # Prioridad (menor número = mayor prioridad)
+        self.timeline = []
 
         # Atributos necesarios para todos los algoritmos
         self.remaining = int(bt)  # Tiempo restante (para RR y SRT)
