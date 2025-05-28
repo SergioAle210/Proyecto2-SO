@@ -412,9 +412,12 @@ class SimuladorGUI:
                 )
                 return
             tipo = self.sync_tipo.get()
-            simulador = (
-                MutexSimulador(...) if tipo == "mutex" else SemaforoSimulador(...)
-            )
+            if tipo == "mutex":
+                simulador = MutexSimulador(self.procesos, self.recursos, self.acciones)
+            else:
+                simulador = SemaforoSimulador(
+                    self.procesos, self.recursos, self.acciones
+                )
             resultado = simulador.ejecutar()
             self.dibujar_sync(resultado)
 
