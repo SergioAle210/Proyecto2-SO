@@ -21,18 +21,20 @@ from sync.semaforo import SemaforoSimulador
 
 
 class SimuladorGUI:
+    # ──────────────────────────────────────────────────────────────────────────
     def __init__(self, root):
         self.root = root
         self.root.title("Proyecto 2")
         self.root.geometry("1200x800")
 
+        # ─ estado ─
         self.procesos = []
         self.recursos = {}
         self.acciones = []
         self.colors = {}
 
+        # ─ estilo general ─
         self.modo_var = tk.StringVar(value="calendarizacion")
-
         self.style = ttk.Style()
         self.style.configure("TButton", font=("Arial", 10))
         self.style.configure("TLabel", font=("Arial", 10))
@@ -42,14 +44,11 @@ class SimuladorGUI:
 
         self.top_frame = tk.Frame(container)
         self.top_frame.pack(fill="x")
-
         self.left_panel = tk.Frame(self.top_frame)
         self.left_panel.pack(side="left", fill="y", padx=10)
-
         self.control_panel = tk.Frame(self.top_frame)
         self.control_panel.pack(side="left", fill="y", expand=True)
 
-        # Modo de simulación
         tk.Label(
             self.left_panel, text="Modo de Simulación:", font=("Arial", 12, "bold")
         ).pack(pady=5)
@@ -68,6 +67,7 @@ class SimuladorGUI:
             command=self.actualizar_modo,
         ).pack(anchor="w")
 
+        # selector de sincronización
         self.sync_selector = tk.Frame(self.left_panel)
         self.sync_tipo = tk.StringVar(value="mutex")
         ttk.Label(self.sync_selector, text="Tipo de sincronización:").pack(pady=5)
@@ -81,6 +81,7 @@ class SimuladorGUI:
             value="semaforo",
         ).pack(anchor="w")
 
+        # ─ algoritmos de calendarización ─
         self.algoritmos = {
             "FIFO": fifo,
             "SJF": sjf,
@@ -88,13 +89,13 @@ class SimuladorGUI:
             "Round Robin": round_robin,
             "Priority": priority,
         }
-
         self.simulacion_frame = tk.Frame(self.left_panel)
         tk.Label(
             self.simulacion_frame,
             text="Seleccione uno o más algoritmos:",
             font=("Arial", 11),
         ).pack(pady=5)
+
         self.algoritmo_vars = {}
         for nombre in self.algoritmos:
             var = tk.BooleanVar(value=(nombre == "FIFO"))
@@ -106,48 +107,38 @@ class SimuladorGUI:
                 command=self.actualizar_vista,
             ).pack(anchor="w", padx=10)
 
+        # quantum
         self.quantum_frame = tk.Frame(self.simulacion_frame)
-        self.quantum_label = tk.Label(self.quantum_frame, text="Quantum:")
-        self.quantum_label.pack(side="left")
+        tk.Label(self.quantum_frame, text="Quantum:").pack(side="left")
         self.quantum_entry = tk.Entry(self.quantum_frame, width=5)
         self.quantum_entry.insert(0, "3")
         self.quantum_entry.pack(side="left")
         self.quantum_frame.pack(pady=5)
         self.quantum_frame.pack_forget()
 
+        # ─ botones de control ─
         self.botones_frame = tk.Frame(self.control_panel)
         self.botones_frame.pack(pady=10)
-
-        boton_style = {"width": 18, "padding": 6}
-
-        self.boton_cargar = ttk.Button(
+        ttk.Button(
             self.botones_frame, text="Cargar archivos", command=self.cargar_procesos
+        ).grid(row=0, column=0, padx=5)
+        ttk.Button(self.botones_frame, text="Simular", command=self.simular).grid(
+            row=0, column=1, padx=5
         )
-        self.boton_cargar.grid(row=0, column=0, padx=5)
-
-        self.boton_simular = ttk.Button(
-            self.botones_frame, text="Simular", command=self.simular
-        )
-        self.boton_simular.grid(row=0, column=1, padx=5)
-
-        self.boton_limpiar = ttk.Button(
+        ttk.Button(
             self.botones_frame, text="Limpiar archivos", command=self.limpiar_procesos
-        )
-        self.boton_limpiar.grid(row=0, column=2, padx=5)
+        ).grid(row=0, column=2, padx=5)
 
-        # Frame de métricas debajo de los botones
+        # ─ métricas ─
         self.metricas_frame = tk.Frame(self.control_panel)
         self.metricas_frame.pack(fill="x", pady=10)
-
-        self.metricas_titulo = tk.Label(
+        tk.Label(
             self.metricas_frame,
             text="Métricas de Algoritmos de Calendarización",
             font=("Arial", 11, "bold"),
             bg="#f4f4f4",
             anchor="w",
-        )
-        self.metricas_titulo.pack(fill="x", padx=10, pady=(5, 0))
-
+        ).pack(fill="x", padx=10, pady=(5, 0))
         self.metricas_label = tk.Label(
             self.metricas_frame,
             text="",
@@ -158,77 +149,100 @@ class SimuladorGUI:
         )
         self.metricas_label.pack(fill="x", padx=15, pady=5)
 
-        # Canvas con scroll horizontal y vertical bien posicionado
+        # ─ canvas de Gantt ─
         self.canvas_frame = tk.Frame(container)
         self.canvas_frame.pack(fill="both", expand=True)
-
         self.canvas = tk.Canvas(
             self.canvas_frame, bg="white", scrollregion=(0, 0, 5000, 2000)
         )
         self.canvas.grid(row=0, column=0, sticky="nsew")
-
-        self.scroll_x = tk.Scrollbar(
+        ttk.Scrollbar(
             self.canvas_frame, orient="horizontal", command=self.canvas.xview
-        )
-        self.scroll_x.grid(row=1, column=0, sticky="ew")
-
-        self.scroll_y = tk.Scrollbar(
+        ).grid(row=1, column=0, sticky="ew")
+        ttk.Scrollbar(
             self.canvas_frame, orient="vertical", command=self.canvas.yview
-        )
-        self.scroll_y.grid(row=0, column=1, sticky="ns")
-
+        ).grid(row=0, column=1, sticky="ns")
         self.canvas.config(
-            xscrollcommand=self.scroll_x.set, yscrollcommand=self.scroll_y.set
+            xscrollcommand=self.canvas_frame.children["!scrollbar"].set,
+            yscrollcommand=self.canvas_frame.children["!scrollbar2"].set,
         )
-
         self.canvas_frame.grid_rowconfigure(0, weight=1)
         self.canvas_frame.grid_columnconfigure(0, weight=1)
 
-        # Leyenda de colores
+        # ─ leyenda de colores ─
         self.leyenda_frame = tk.Frame(container)
         self.leyenda_frame.pack(fill="x", pady=5)
 
-        # Tabla de resumen
+        # ─ tablas (Treeview)
         self.tabla_frame = tk.Frame(container)
         self.tabla_frame.pack(fill="x", pady=10)
-
         self.tablas_contenedor = tk.Frame(self.tabla_frame)
         self.tablas_contenedor.pack(fill="x")
 
+        # procesos
         self.frame_procesos = tk.Frame(self.tablas_contenedor)
         self.frame_procesos.pack(side="left", padx=10, fill="y")
         tk.Label(
             self.frame_procesos, text="Procesos", font=("Arial", 10, "bold")
         ).pack()
-        self.tabla_procesos = tk.Text(
-            self.frame_procesos, height=6, width=40, bg="#f4f4f4"
+        self.tree_procesos = self._crear_tree(
+            self.frame_procesos,
+            columnas={"pid": "PID", "bt": "BT", "at": "AT", "prio": "Priority"},
+            ancho=70,
         )
-        self.tabla_procesos.pack()
 
+        # recursos
         self.frame_recursos = tk.Frame(self.tablas_contenedor)
         self.frame_recursos.pack(side="left", padx=10, fill="y")
         tk.Label(
             self.frame_recursos, text="Recursos", font=("Arial", 10, "bold")
         ).pack()
-        self.tabla_recursos = tk.Text(
-            self.frame_recursos, height=6, width=40, bg="#f4f4f4"
+        self.tree_recursos = self._crear_tree(
+            self.frame_recursos,
+            columnas={"nombre": "Recurso", "contador": "Contador"},
+            ancho=90,
         )
-        self.tabla_recursos.pack()
 
+        # acciones
         self.frame_acciones = tk.Frame(self.tablas_contenedor)
         self.frame_acciones.pack(side="left", padx=10, fill="y")
         tk.Label(
             self.frame_acciones, text="Acciones", font=("Arial", 10, "bold")
         ).pack()
-        self.tabla_acciones = tk.Text(
-            self.frame_acciones, height=6, width=40, bg="#f4f4f4"
+        self.tree_acciones = self._crear_tree(
+            self.frame_acciones,
+            columnas={
+                "pid": "PID",
+                "tipo": "Tipo",
+                "recurso": "Recurso",
+                "ciclo": "Ciclo",
+            },
+            ancho=80,
         )
-        self.tabla_acciones.pack()
 
         self.frame_recursos.pack_forget()
         self.frame_acciones.pack_forget()
-
         self.actualizar_modo()
+
+    def _crear_tree(self, parent, columnas, ancho=60):
+
+        col_ids = list(columnas.keys())
+
+        tree = ttk.Treeview(parent, columns=col_ids, show="headings", height=6)
+
+        for col in col_ids:
+            tree.heading(col, text=columnas[col])
+            tree.column(col, width=ancho, anchor="center")
+
+        sb = ttk.Scrollbar(parent, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=sb.set)
+        tree.pack(side="left", fill="both", expand=True)
+        sb.pack(side="left", fill="y")
+        return tree
+
+    def _limpiar_tree(self, tree):
+        for row in tree.get_children():
+            tree.delete(row)
 
     def actualizar_modo(self):
         modo = self.modo_var.get()
@@ -250,42 +264,45 @@ class SimuladorGUI:
             self.quantum_frame.pack_forget()
 
     def cargar_procesos(self):
-        modo = self.modo_var.get()
         archivo = filedialog.askopenfilename(filetypes=[("Archivos TXT", "*.txt")])
         if not archivo:
             return
-        contenido = []
+
+        modo = self.modo_var.get()
         try:
             if modo == "calendarizacion":
                 self.procesos = leer_procesos(archivo)
-                contenido = [
-                    f"{p.pid}, {p.bt}, {p.at}, {p.priority}" for p in self.procesos
-                ]
-                self.tabla_procesos.delete("1.0", tk.END)
-                self.tabla_procesos.insert(tk.END, "\n".join(contenido))
-            else:
+                self._limpiar_tree(self.tree_procesos)
+                for p in self.procesos:
+                    self.tree_procesos.insert(
+                        "", "end", values=(p.pid, p.bt, p.at, p.priority)
+                    )
+
+            else:  # sincronización
                 if "procesos" in archivo:
                     self.procesos = leer_procesos_sync(archivo)
-                    contenido = [
-                        f"{p.pid}, {p.bt}, {p.at}, {p.priority}" for p in self.procesos
-                    ]
-                    self.tabla_procesos.delete("1.0", tk.END)
-                    self.tabla_procesos.insert(tk.END, "\n".join(contenido))
+                    self._limpiar_tree(self.tree_procesos)
+                    for p in self.procesos:
+                        self.tree_procesos.insert(
+                            "", "end", values=(p.pid, p.bt, p.at, p.priority)
+                        )
+
                 elif "recursos" in archivo:
                     self.recursos = leer_recursos(archivo)
-                    contenido = [
-                        f"{r.nombre}, {r.contador}" for r in self.recursos.values()
-                    ]
-                    self.tabla_recursos.delete("1.0", tk.END)
-                    self.tabla_recursos.insert(tk.END, "\n".join(contenido))
+                    self._limpiar_tree(self.tree_recursos)
+                    for r in self.recursos.values():
+                        self.tree_recursos.insert(
+                            "", "end", values=(r.nombre, r.contador)
+                        )
+
                 elif "acciones" in archivo:
                     self.acciones = leer_acciones(archivo)
-                    contenido = [
-                        f"{a.pid}, {a.tipo}, {a.recurso}, {a.ciclo}"
-                        for a in self.acciones
-                    ]
-                    self.tabla_acciones.delete("1.0", tk.END)
-                    self.tabla_acciones.insert(tk.END, "\n".join(contenido))
+                    self._limpiar_tree(self.tree_acciones)
+                    for a in self.acciones:
+                        self.tree_acciones.insert(
+                            "", "end", values=(a.pid, a.tipo, a.recurso, a.ciclo)
+                        )
+
         except Exception as e:
             messagebox.showerror(
                 "Error de lectura", f"Ocurrió un error al cargar el archivo:\n{e}"
@@ -296,16 +313,17 @@ class SimuladorGUI:
         self.actualizar_leyenda()
 
     def limpiar_procesos(self):
-        self.procesos = []
-        self.recursos = {}
-        self.acciones = []
+        self.procesos, self.recursos, self.acciones = [], {}, []
         self.canvas.delete("all")
-        self.tabla_procesos.delete("1.0", tk.END)
-        self.tabla_recursos.delete("1.0", tk.END)
-        self.tabla_acciones.delete("1.0", tk.END)
         self.metricas_label.config(text="")
+
+        # limpiar tablas
+        for tree in (self.tree_procesos, self.tree_recursos, self.tree_acciones):
+            self._limpiar_tree(tree)
+
         for widget in self.leyenda_frame.winfo_children():
             widget.destroy()
+
         messagebox.showinfo(
             "Limpieza",
             "Se han limpiado los procesos, recursos, acciones, canvas y leyenda.",
