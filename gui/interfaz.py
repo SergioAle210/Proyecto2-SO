@@ -36,6 +36,12 @@ class SimuladorGUI:
         # ─ estilo general ─
         self.modo_var = tk.StringVar(value="calendarizacion")
         self.style = ttk.Style()
+        self.style.configure(
+            "Alg.TCheckbutton", font=("Arial", 10), background="#f4f4f4", padding=(4, 2)
+        )
+        self.style.map(  # color suave cuando está seleccionado
+            "Alg.TCheckbutton", background=[("selected", "#d0eaff")]
+        )
         self.style.configure("TButton", font=("Arial", 10))
         self.style.configure("TLabel", font=("Arial", 10))
 
@@ -89,32 +95,49 @@ class SimuladorGUI:
             "Round Robin": round_robin,
             "Priority": priority,
         }
-        self.simulacion_frame = tk.Frame(self.left_panel)
-        tk.Label(
-            self.simulacion_frame,
-            text="Seleccione uno o más algoritmos:",
-            font=("Arial", 11),
-        ).pack(pady=5)
-
         self.algoritmo_vars = {}
-        for nombre in self.algoritmos:
+        self.simulacion_frame = ttk.LabelFrame(
+            self.left_panel, text="Seleccione uno o más algoritmos", padding=(10, 8)
+        )
+        self.simulacion_frame.pack(fill="x", pady=5)
+
+        # botones “seleccionar todos / limpiar”
+        btns_frame = tk.Frame(self.simulacion_frame, bg="#f4f4f4")
+        btns_frame.grid(row=0, columnspan=3, sticky="w", pady=(0, 6))
+        ttk.Button(
+            btns_frame,
+            text="✓ Todos",
+            width=8,
+            command=lambda: [v.set(True) for v in self.algoritmo_vars.values()],
+        ).pack(side="left", padx=(0, 5))
+        ttk.Button(
+            btns_frame,
+            text="✗ Ninguno",
+            width=12,
+            command=lambda: [v.set(False) for v in self.algoritmo_vars.values()],
+        ).pack(side="left")
+
+        # checkbuttons en 2 columnas
+        self.algoritmo_vars = {}
+        for idx, nombre in enumerate(self.algoritmos):
             var = tk.BooleanVar(value=(nombre == "FIFO"))
             self.algoritmo_vars[nombre] = var
             ttk.Checkbutton(
                 self.simulacion_frame,
                 text=nombre,
                 variable=var,
+                style="Alg.TCheckbutton",
                 command=self.actualizar_vista,
-            ).pack(anchor="w", padx=10)
+            ).grid(row=(idx // 2) + 1, column=idx % 2, sticky="w", padx=5, pady=2)
 
-        # quantum
-        self.quantum_frame = tk.Frame(self.simulacion_frame)
-        tk.Label(self.quantum_frame, text="Quantum:").pack(side="left")
+        #  espacio para Quantum (queda debajo en una sola columna)
+        self.quantum_frame = tk.Frame(self.simulacion_frame, bg="#f4f4f4")
+        self.quantum_frame.grid(row=4, column=0, columnspan=2, pady=(8, 0), sticky="w")
+        tk.Label(self.quantum_frame, text="Quantum:", bg="#f4f4f4").pack(side="left")
         self.quantum_entry = tk.Entry(self.quantum_frame, width=5)
         self.quantum_entry.insert(0, "3")
         self.quantum_entry.pack(side="left")
-        self.quantum_frame.pack(pady=5)
-        self.quantum_frame.pack_forget()
+        self.quantum_frame.grid_remove()  # se oculta al inicio
 
         # ─ botones de control ─
         self.botones_frame = tk.Frame(self.control_panel)
@@ -256,9 +279,9 @@ class SimuladorGUI:
 
     def actualizar_vista(self):
         if self.algoritmo_vars["Round Robin"].get():
-            self.quantum_frame.pack(pady=5)
+            self.quantum_frame.grid(pady=5)
         else:
-            self.quantum_frame.pack_forget()
+            self.quantum_frame.grid_remove()
 
     def cargar_procesos(self):
         archivo = filedialog.askopenfilename(filetypes=[("Archivos TXT", "*.txt")])
