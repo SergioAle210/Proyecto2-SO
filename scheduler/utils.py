@@ -44,8 +44,8 @@ def calcular_metricas(procesos):
     n = len(procesos)
 
     for p in procesos:
-        wt = p.start_time - p.at
         tat = p.end_time - p.at
+        wt = tat - p.bt
         total_wt += wt
         total_tat += tat
 
