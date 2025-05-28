@@ -82,16 +82,44 @@ class SimuladorGUI:
         # selector de sincronización
         self.sync_selector = tk.Frame(self.left_panel)
         self.sync_tipo = tk.StringVar(value="mutex")
-        ttk.Label(self.sync_selector, text="Tipo de sincronización:").pack(pady=5)
-        ttk.Radiobutton(
-            self.sync_selector, text="Mutex", variable=self.sync_tipo, value="mutex"
-        ).pack(anchor="w")
-        ttk.Radiobutton(
-            self.sync_selector,
+        self.sync_selector = ttk.LabelFrame(
+            self.left_panel, text="Tipo de sincronización"
+        )
+        self.sync_selector.pack(fill="x", pady=5)
+
+        # sub-contenedor centrado ─
+        sync_center = tk.Frame(self.sync_selector, bg="#f4f4f4")
+        sync_center.pack(pady=4)
+
+        self.sync_tipo = tk.StringVar(value="mutex")
+
+        def set_sync(tipo):
+            self.sync_tipo.set(tipo)
+            mutex_btn.state(("pressed",) if tipo == "mutex" else ("!pressed",))
+            sema_btn.state(("pressed",) if tipo == "semaforo" else ("!pressed",))
+
+        self.style.configure("Sync.TButton", relief="flat", padding=(14, 6))
+        self.style.map(
+            "Sync.TButton", background=[("pressed", "#d0eaff"), ("!pressed", "#ffffff")]
+        )
+
+        mutex_btn = ttk.Button(
+            sync_center,
+            text="Mutex",
+            style="Sync.TButton",
+            command=lambda: set_sync("mutex"),
+        )
+        sema_btn = ttk.Button(
+            sync_center,
             text="Semáforo",
-            variable=self.sync_tipo,
-            value="semaforo",
-        ).pack(anchor="w")
+            style="Sync.TButton",
+            command=lambda: set_sync("semaforo"),
+        )
+
+        mutex_btn.pack(side="left", padx=(0, 4))
+        sema_btn.pack(side="left", padx=(4, 0))
+
+        set_sync("mutex")
 
         # algoritmos de calendarización ─
         self.algoritmos = {
