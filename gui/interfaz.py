@@ -514,20 +514,22 @@ class SimuladorGUI:
             etiqueta.pack(side="left", padx=(0, 10))
 
     def limpiar_procesos(self):
-        self.procesos = []
-        self.recursos = {}
-        self.acciones = []
+        self.procesos, self.recursos, self.acciones = [], {}, []
+
         self.canvas.delete("all")
-        self.tabla_procesos.delete("1.0", tk.END)
-        self.tabla_recursos.delete("1.0", tk.END)
-        self.tabla_acciones.delete("1.0", tk.END)
-        self.metricas_label.config(text="")
+
+        for tree in (
+            self.tree_procesos,
+            self.tree_recursos,
+            self.tree_acciones,
+            self.tree_metricas,
+        ):
+            self._limpiar_tree(tree)
 
         for widget in self.leyenda_frame.winfo_children():
-            widget.pack_forget()
             widget.destroy()
 
         messagebox.showinfo(
             "Limpieza",
-            "Se han limpiado los procesos, recursos, acciones, canvas y leyenda.",
+            "Se han limpiado los procesos, recursos, acciones, métricas, canvas y leyenda.",
         )
