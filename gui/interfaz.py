@@ -134,20 +134,17 @@ class SimuladorGUI:
         self.metricas_frame.pack(fill="x", pady=10)
         tk.Label(
             self.metricas_frame,
-            text="Métricas de Algoritmos de Calendarización",
+            text="Métricas de algoritmos de calendarización",
             font=("Arial", 11, "bold"),
             bg="#f4f4f4",
             anchor="w",
         ).pack(fill="x", padx=10, pady=(5, 0))
-        self.metricas_label = tk.Label(
+
+        self.tree_metricas = self._crear_tree(
             self.metricas_frame,
-            text="",
-            font=("Courier New", 10),
-            justify="left",
-            bg="#f4f4f4",
-            anchor="w",
+            columnas={"alg": "Algoritmo", "wt": "WT Prom", "tat": "TAT Prom"},
+            ancho=120,
         )
-        self.metricas_label.pack(fill="x", padx=15, pady=5)
 
         # ─ canvas de Gantt ─
         self.canvas_frame = tk.Frame(container)
@@ -334,7 +331,8 @@ class SimuladorGUI:
 
     def simular(self):
         self.canvas.delete("all")
-        self.mostrar_metricas("", clear=True)
+        # ─ limpiar tabla de métricas (Treeview) ─
+        self._limpiar_tree(self.tree_metricas)
 
         modo = self.modo_var.get()
         if modo == "calendarizacion":
@@ -342,12 +340,14 @@ class SimuladorGUI:
                 messagebox.showwarning("Error", "Primero carga un archivo de procesos.")
                 return
 
+            primera = True  # para resetear solo en la 1.ª fila
             for nombre, activo in self.algoritmo_vars.items():
                 if not activo.get():
                     continue
 
                 funcion = self.algoritmos[nombre]
 
+                # ─── ejecutar algoritmo ───
                 if nombre == "Round Robin":
                     try:
                         quantum = int(self.quantum_entry.get())
@@ -359,9 +359,12 @@ class SimuladorGUI:
                         )
                         continue
                     resultado = funcion(deepcopy(self.procesos), quantum)
+                    nombre_mostrado = f"{nombre} (q={quantum})"
                 else:
                     resultado = funcion(deepcopy(self.procesos))
+                    nombre_mostrado = nombre
 
+                # puede venir como (procesos, timeline)
                 if isinstance(resultado, tuple):
                     procesos_res, timeline = resultado
                 else:
@@ -371,13 +374,15 @@ class SimuladorGUI:
                     procesos_res, nombre_algoritmo=nombre, timeline_override=timeline
                 )
 
+                # ─── métricas ───
                 avg_wt, avg_tat = calcular_metricas(procesos_res)
-                self.mostrar_metricas(
-                    f"{nombre}: Tiempo de Espera Promedio: {avg_wt:.2f} ciclos | "
-                    f"Turnaround: {avg_tat:.2f} ciclos"
+                self.mostrar_metricas(nombre_mostrado, avg_wt, avg_tat, reset=primera)
+                primera = (
+                    False  # después de la primera pasada ya no se reinicia la tabla
                 )
 
         else:
+            # … tu bloque de sincronización queda igual …
             if not self.procesos or not self.recursos or not self.acciones:
                 messagebox.showerror(
                     "Error", "Faltan procesos, recursos o acciones para simular."
@@ -478,13 +483,26 @@ class SimuladorGUI:
                 font=("Arial", 8),
             )
 
-    def mostrar_metricas(self, texto, clear=False):
-        if clear:
-            self.metricas_label.config(text="")
-        else:
-            actual = self.metricas_label.cget("text")
-            nuevo = actual + "\n" + texto if actual else texto
-            self.metricas_label.config(text=nuevo)
+    def mostrar_metricas(self, alg_nombre, wt, tat, reset=False):
+        """
+        • alg_nombre: texto (ej. "Round Robin (q=3)")
+        • wt, tat   : float
+        • reset     : True → vacía la tabla antes de añadir la 1.ª fila
+        """
+        if reset:
+            self._limpiar_tree(self.tree_metricas)
+
+        # buscar si ya existe una fila con ese algoritmo
+        for iid in self.tree_metricas.get_children():
+            if self.tree_metricas.set(iid, "alg") == alg_nombre:
+                self.tree_metricas.item(
+                    iid, values=(alg_nombre, f"{wt:.2f}", f"{tat:.2f}")
+                )
+                break
+        else:  # no existe → insertar nueva
+            self.tree_metricas.insert(
+                "", "end", values=(alg_nombre, f"{wt:.2f}", f"{tat:.2f}")
+            )
 
     def actualizar_leyenda(self):
         for widget in self.leyenda_frame.winfo_children():
