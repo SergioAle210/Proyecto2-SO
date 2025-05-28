@@ -23,7 +23,7 @@ from sync.semaforo import SemaforoSimulador
 class SimuladorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Simulador de Sistemas Operativos - UVG 2025")
+        self.root.title("Proyecto 2")
         self.root.geometry("1200x800")
 
         self.procesos = []
@@ -317,33 +317,47 @@ class SimuladorGUI:
     def simular(self):
         self.canvas.delete("all")
         self.mostrar_metricas("", clear=True)
+
         modo = self.modo_var.get()
         if modo == "calendarizacion":
             if not self.procesos:
                 messagebox.showwarning("Error", "Primero carga un archivo de procesos.")
                 return
+
             for nombre, activo in self.algoritmo_vars.items():
-                if activo.get():
-                    funcion = self.algoritmos[nombre]
-                    if nombre == "Round Robin":
-                        try:
-                            quantum = int(self.quantum_entry.get())
-                            if quantum <= 0:
-                                raise ValueError
-                        except ValueError:
-                            messagebox.showerror(
-                                "Error",
-                                "Quantum inválido. Ingrese un número entero > 0.",
-                            )
-                            continue
-                        resultado = funcion(deepcopy(self.procesos), quantum)
-                    else:
-                        resultado = funcion(deepcopy(self.procesos))
-                    self.dibujar_gantt(resultado, nombre)
-                    avg_wt, avg_tat = calcular_metricas(resultado)
-                    self.mostrar_metricas(
-                        f"{nombre}: Tiempo de Espera Promedio: {avg_wt:.2f} ciclos | Turnaround: {avg_tat:.2f} ciclos"
-                    )
+                if not activo.get():
+                    continue
+
+                funcion = self.algoritmos[nombre]
+
+                if nombre == "Round Robin":
+                    try:
+                        quantum = int(self.quantum_entry.get())
+                        if quantum <= 0:
+                            raise ValueError
+                    except ValueError:
+                        messagebox.showerror(
+                            "Error", "Quantum inválido. Ingrese un número entero > 0."
+                        )
+                        continue
+                    resultado = funcion(deepcopy(self.procesos), quantum)
+                else:
+                    resultado = funcion(deepcopy(self.procesos))
+
+                if isinstance(resultado, tuple):
+                    procesos_res, timeline = resultado
+                else:
+                    procesos_res, timeline = resultado, None
+
+                self.dibujar_gantt(
+                    procesos_res, nombre_algoritmo=nombre, timeline_override=timeline
+                )
+
+                avg_wt, avg_tat = calcular_metricas(procesos_res)
+                self.mostrar_metricas(
+                    f"{nombre}: Tiempo de Espera Promedio: {avg_wt:.2f} ciclos | "
+                    f"Turnaround: {avg_tat:.2f} ciclos"
+                )
 
         else:
             if not self.procesos or not self.recursos or not self.acciones:
@@ -352,22 +366,17 @@ class SimuladorGUI:
                 )
                 return
             tipo = self.sync_tipo.get()
-            if tipo == "mutex":
-                simulador = MutexSimulador(self.procesos, self.recursos, self.acciones)
-            else:
-                simulador = SemaforoSimulador(
-                    self.procesos, self.recursos, self.acciones
-                )
+            simulador = (
+                MutexSimulador(...) if tipo == "mutex" else SemaforoSimulador(...)
+            )
             resultado = simulador.ejecutar()
             self.dibujar_sync(resultado)
 
-    def dibujar_gantt(self, procesos, nombre_algoritmo=""):
+    def dibujar_gantt(self, procesos, nombre_algoritmo="", timeline_override=None):
         escala = 25
         x = 10
-        # Calcular desplazamiento vertical en función de los algoritmos ya dibujados
-        num_algoritmos_previos = self.metricas_label.cget("text").count("\n") + 1
-        y_offset = self.canvas.bbox("all")[3] + 30 if self.canvas.bbox("all") else 40
 
+        y_offset = self.canvas.bbox("all")[3] + 30 if self.canvas.bbox("all") else 40
         if nombre_algoritmo:
             self.canvas.create_text(
                 10,
@@ -377,33 +386,48 @@ class SimuladorGUI:
                 font=("Arial", 10, "bold"),
             )
 
-        timeline = []
-        for p in procesos:
-            for t in range(p.start_time, p.end_time):
-                timeline.append((p.pid, t))
+        if timeline_override is not None:
+            timeline = timeline_override
+        else:
+            timeline = []
+            for p in procesos:
+                for t in range(p.start_time, p.end_time):
+                    timeline.append((p.pid, t))
+        # ------------------------------------------------------------
 
-        for pid, ciclo in timeline:
-            self.root.update()
+        for elemento in timeline:
+
+            if len(elemento) == 2:
+                pid, ciclo = elemento
+                ancho = escala
+            else:
+                pid, inicio, dur = elemento
+                ciclo = inicio
+                ancho = dur * escala
+
             color = self.colors.get(pid, "#cccccc")
+
             self.canvas.create_rectangle(
-                x, y_offset, x + escala, y_offset + 60, fill=color, outline="black"
+                x, y_offset, x + ancho, y_offset + 30, fill=color, outline="black"
             )
             self.canvas.create_text(
-                x + escala // 2, y_offset + 30, text=pid, font=("Arial", 9)
+                x + ancho // 2, y_offset + 15, text=pid, font=("Arial", 9)
             )
             self.canvas.create_text(
-                x, y_offset + 70, text=str(ciclo), anchor="n", font=("Arial", 8)
+                x, y_offset + 40, text=str(ciclo), anchor="n", font=("Arial", 8)
             )
-            x += escala
-            time.sleep(0.03)
+            self.root.update()
+            x += ancho
+            time.sleep(0.02)
 
         if timeline:
+            ult_ciclo = (
+                timeline[-1][1] + 1
+                if len(timeline[-1]) == 2
+                else timeline[-1][1] + timeline[-1][2]
+            )
             self.canvas.create_text(
-                x,
-                y_offset + 70,
-                text=str(timeline[-1][1] + 1),
-                anchor="n",
-                font=("Arial", 8),
+                x, y_offset + 40, text=str(ult_ciclo), anchor="n", font=("Arial", 8)
             )
 
     def dibujar_sync(self, procesos):
