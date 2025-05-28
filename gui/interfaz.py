@@ -121,7 +121,7 @@ class SimuladorGUI:
         boton_style = {"width": 18, "padding": 6}
 
         self.boton_cargar = ttk.Button(
-            self.botones_frame, text="Cargar Procesos", command=self.cargar_procesos
+            self.botones_frame, text="Cargar archivos", command=self.cargar_procesos
         )
         self.boton_cargar.grid(row=0, column=0, padx=5)
 
@@ -131,7 +131,7 @@ class SimuladorGUI:
         self.boton_simular.grid(row=0, column=1, padx=5)
 
         self.boton_limpiar = ttk.Button(
-            self.botones_frame, text="Limpiar Procesos", command=self.limpiar_procesos
+            self.botones_frame, text="Limpiar archivos", command=self.limpiar_procesos
         )
         self.boton_limpiar.grid(row=0, column=2, padx=5)
 
