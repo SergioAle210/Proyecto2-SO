@@ -55,20 +55,29 @@ class SimuladorGUI:
         tk.Label(
             self.left_panel, text="Modo de Simulación:", font=("Arial", 12, "bold")
         ).pack(pady=5)
-        ttk.Radiobutton(
-            self.left_panel,
-            text="Calendarización",
-            variable=self.modo_var,
-            value="calendarizacion",
-            command=self.actualizar_modo,
-        ).pack(anchor="w")
-        ttk.Radiobutton(
-            self.left_panel,
-            text="Sincronización",
-            variable=self.modo_var,
-            value="sincronizacion",
-            command=self.actualizar_modo,
-        ).pack(anchor="w")
+        self.modo_notebook = ttk.Notebook(self.left_panel)
+
+        self.style.configure(
+            "Modo.TNotebook.Tab", font=("Arial", 11, "bold"), padding=(12, 6)
+        )
+        self.modo_notebook.configure(style="Modo.TNotebook")
+
+        # pestaña 0: Calendarización
+        tab_cal = ttk.Frame(self.modo_notebook)
+        self.modo_notebook.add(tab_cal, text="Calendarización")
+
+        # pestaña 1: Sincronización
+        tab_sync = ttk.Frame(self.modo_notebook)
+        self.modo_notebook.add(tab_sync, text="Sincronización")
+
+        self.modo_notebook.pack(fill="x", pady=(2, 10))
+
+        def on_tab_change(event):
+            tab_index = event.widget.index("current")
+            self.modo_var.set("calendarizacion" if tab_index == 0 else "sincronizacion")
+            self.actualizar_modo()
+
+        self.modo_notebook.bind("<<NotebookTabChanged>>", on_tab_change)
 
         # selector de sincronización
         self.sync_selector = tk.Frame(self.left_panel)
@@ -103,14 +112,14 @@ class SimuladorGUI:
         btns_frame.grid(row=0, columnspan=3, sticky="w", pady=(0, 6))
         ttk.Button(
             btns_frame,
-            text="✓ Todos",
-            width=8,
+            text="Todos",
+            width=10,
             command=lambda: [v.set(True) for v in self.algoritmo_vars.values()],
         ).pack(side="left", padx=(0, 5))
         ttk.Button(
             btns_frame,
-            text="✗ Ninguno",
-            width=12,
+            text="Ninguno",
+            width=10,
             command=lambda: [v.set(False) for v in self.algoritmo_vars.values()],
         ).pack(side="left")
 
