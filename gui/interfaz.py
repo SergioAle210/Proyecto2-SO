@@ -21,7 +21,6 @@ from sync.semaforo import SemaforoSimulador
 
 
 class SimuladorGUI:
-    # ──────────────────────────────────────────────────────────────────────────
     def __init__(self, root):
         self.root = root
         self.root.title("Proyecto 2")
@@ -39,9 +38,7 @@ class SimuladorGUI:
         self.style.configure(
             "Alg.TCheckbutton", font=("Arial", 10), background="#f4f4f4", padding=(4, 2)
         )
-        self.style.map(  # color suave cuando está seleccionado
-            "Alg.TCheckbutton", background=[("selected", "#d0eaff")]
-        )
+        self.style.map("Alg.TCheckbutton", background=[("selected", "#d0eaff")])
         self.style.configure("TButton", font=("Arial", 10))
         self.style.configure("TLabel", font=("Arial", 10))
 
@@ -87,7 +84,7 @@ class SimuladorGUI:
             value="semaforo",
         ).pack(anchor="w")
 
-        # ─ algoritmos de calendarización ─
+        # algoritmos de calendarización ─
         self.algoritmos = {
             "FIFO": fifo,
             "SJF": sjf,
@@ -139,7 +136,7 @@ class SimuladorGUI:
         self.quantum_entry.pack(side="left")
         self.quantum_frame.grid_remove()  # se oculta al inicio
 
-        # ─ botones de control ─
+        # botones de control ─
         self.botones_frame = tk.Frame(self.control_panel)
         self.botones_frame.pack(pady=10)
         ttk.Button(
@@ -152,7 +149,7 @@ class SimuladorGUI:
             self.botones_frame, text="Limpiar archivos", command=self.limpiar_procesos
         ).grid(row=0, column=2, padx=5)
 
-        # ─ métricas ─
+        # métricas ─
         self.metricas_frame = tk.Frame(self.control_panel)
         self.metricas_frame.pack(fill="x", pady=10)
         tk.Label(
@@ -163,13 +160,13 @@ class SimuladorGUI:
             anchor="w",
         ).pack(fill="x", padx=10, pady=(5, 0))
 
-        self.tree_metricas = self._crear_tree(
+        self.tree_metricas = self.crear_tree(
             self.metricas_frame,
             columnas={"alg": "Algoritmo", "wt": "WT Prom", "tat": "TAT Prom"},
             ancho=120,
         )
 
-        # ─ canvas de Gantt ─
+        # canvas de Gantt ─
         self.canvas_frame = tk.Frame(container)
         self.canvas_frame.pack(fill="both", expand=True)
         self.canvas = tk.Canvas(
@@ -189,11 +186,11 @@ class SimuladorGUI:
         self.canvas_frame.grid_rowconfigure(0, weight=1)
         self.canvas_frame.grid_columnconfigure(0, weight=1)
 
-        # ─ leyenda de colores ─
+        # leyenda de colores ─
         self.leyenda_frame = tk.Frame(container)
         self.leyenda_frame.pack(fill="x", pady=5)
 
-        # ─ tablas (Treeview)
+        # tablas (Treeview)
         self.tabla_frame = tk.Frame(container)
         self.tabla_frame.pack(fill="x", pady=10)
         self.tablas_contenedor = tk.Frame(self.tabla_frame)
@@ -205,7 +202,7 @@ class SimuladorGUI:
         tk.Label(
             self.frame_procesos, text="Procesos", font=("Arial", 10, "bold")
         ).pack()
-        self.tree_procesos = self._crear_tree(
+        self.tree_procesos = self.crear_tree(
             self.frame_procesos,
             columnas={"pid": "PID", "bt": "BT", "at": "AT", "prio": "Priority"},
             ancho=70,
@@ -217,7 +214,7 @@ class SimuladorGUI:
         tk.Label(
             self.frame_recursos, text="Recursos", font=("Arial", 10, "bold")
         ).pack()
-        self.tree_recursos = self._crear_tree(
+        self.tree_recursos = self.crear_tree(
             self.frame_recursos,
             columnas={"nombre": "Recurso", "contador": "Contador"},
             ancho=90,
@@ -229,7 +226,7 @@ class SimuladorGUI:
         tk.Label(
             self.frame_acciones, text="Acciones", font=("Arial", 10, "bold")
         ).pack()
-        self.tree_acciones = self._crear_tree(
+        self.tree_acciones = self.crear_tree(
             self.frame_acciones,
             columnas={
                 "pid": "PID",
@@ -244,7 +241,7 @@ class SimuladorGUI:
         self.frame_acciones.pack_forget()
         self.actualizar_modo()
 
-    def _crear_tree(self, parent, columnas, ancho=60):
+    def crear_tree(self, parent, columnas, ancho=60):
 
         col_ids = list(columnas.keys())
 
@@ -260,11 +257,13 @@ class SimuladorGUI:
         sb.pack(side="left", fill="y")
         return tree
 
-    def _limpiar_tree(self, tree):
+    def limpiar_tree(self, tree):
         for row in tree.get_children():
             tree.delete(row)
 
     def actualizar_modo(self):
+        self.limpiar_procesos(silent=True)
+
         modo = self.modo_var.get()
         if modo == "calendarizacion":
             self.simulacion_frame.pack(fill="x", pady=10)
@@ -292,7 +291,7 @@ class SimuladorGUI:
         try:
             if modo == "calendarizacion":
                 self.procesos = leer_procesos(archivo)
-                self._limpiar_tree(self.tree_procesos)
+                self.limpiar_tree(self.tree_procesos)
                 for p in self.procesos:
                     self.tree_procesos.insert(
                         "", "end", values=(p.pid, p.bt, p.at, p.priority)
@@ -301,7 +300,7 @@ class SimuladorGUI:
             else:  # sincronización
                 if "procesos" in archivo:
                     self.procesos = leer_procesos_sync(archivo)
-                    self._limpiar_tree(self.tree_procesos)
+                    self.limpiar_tree(self.tree_procesos)
                     for p in self.procesos:
                         self.tree_procesos.insert(
                             "", "end", values=(p.pid, p.bt, p.at, p.priority)
@@ -309,7 +308,7 @@ class SimuladorGUI:
 
                 elif "recursos" in archivo:
                     self.recursos = leer_recursos(archivo)
-                    self._limpiar_tree(self.tree_recursos)
+                    self.limpiar_tree(self.tree_recursos)
                     for r in self.recursos.values():
                         self.tree_recursos.insert(
                             "", "end", values=(r.nombre, r.contador)
@@ -317,7 +316,7 @@ class SimuladorGUI:
 
                 elif "acciones" in archivo:
                     self.acciones = leer_acciones(archivo)
-                    self._limpiar_tree(self.tree_acciones)
+                    self.limpiar_tree(self.tree_acciones)
                     for a in self.acciones:
                         self.tree_acciones.insert(
                             "", "end", values=(a.pid, a.tipo, a.recurso, a.ciclo)
@@ -339,7 +338,7 @@ class SimuladorGUI:
 
         # limpiar tablas
         for tree in (self.tree_procesos, self.tree_recursos, self.tree_acciones):
-            self._limpiar_tree(tree)
+            self.limpiar_tree(tree)
 
         for widget in self.leyenda_frame.winfo_children():
             widget.destroy()
@@ -354,8 +353,8 @@ class SimuladorGUI:
 
     def simular(self):
         self.canvas.delete("all")
-        # ─ limpiar tabla de métricas (Treeview) ─
-        self._limpiar_tree(self.tree_metricas)
+        # limpiar tabla de métricas (Treeview) ─
+        self.limpiar_tree(self.tree_metricas)
 
         modo = self.modo_var.get()
         if modo == "calendarizacion":
@@ -370,7 +369,6 @@ class SimuladorGUI:
 
                 funcion = self.algoritmos[nombre]
 
-                # ─── ejecutar algoritmo ───
                 if nombre == "Round Robin":
                     try:
                         quantum = int(self.quantum_entry.get())
@@ -387,7 +385,6 @@ class SimuladorGUI:
                     resultado = funcion(deepcopy(self.procesos))
                     nombre_mostrado = nombre
 
-                # puede venir como (procesos, timeline)
                 if isinstance(resultado, tuple):
                     procesos_res, timeline = resultado
                 else:
@@ -400,12 +397,9 @@ class SimuladorGUI:
                 # ─── métricas ───
                 avg_wt, avg_tat = calcular_metricas(procesos_res)
                 self.mostrar_metricas(nombre_mostrado, avg_wt, avg_tat, reset=primera)
-                primera = (
-                    False  # después de la primera pasada ya no se reinicia la tabla
-                )
+                primera = False
 
         else:
-            # … tu bloque de sincronización queda igual …
             if not self.procesos or not self.recursos or not self.acciones:
                 messagebox.showerror(
                     "Error", "Faltan procesos, recursos o acciones para simular."
@@ -442,7 +436,6 @@ class SimuladorGUI:
             for p in procesos:
                 for t in range(p.start_time, p.end_time):
                     timeline.append((p.pid, t))
-        # ------------------------------------------------------------
 
         for elemento in timeline:
 
@@ -489,13 +482,13 @@ class SimuladorGUI:
                 self.root.update()
                 color = "green" if estado == "ACCESSED" else "red"
                 self.canvas.create_rectangle(
-                    x, y_offset, x + escala, y_offset + 60, fill=color, outline="black"
+                    x, y_offset, x + escala, y_offset + 30, fill=color, outline="black"
                 )
                 self.canvas.create_text(
-                    x + escala // 2, y_offset + 30, text=p.pid, font=("Arial", 9)
+                    x + escala // 2, y_offset + 15, text=p.pid, font=("Arial", 9)
                 )
                 self.canvas.create_text(
-                    x, y_offset + 70, text=str(ciclo), anchor="n", font=("Arial", 8)
+                    x, y_offset + 40, text=str(ciclo), anchor="n", font=("Arial", 8)
                 )
                 x += escala
                 time.sleep(0.05)
@@ -503,20 +496,15 @@ class SimuladorGUI:
         if procesos and procesos[0].historial:
             self.canvas.create_text(
                 x,
-                y_offset + 70,
+                y_offset + 40,
                 text=str(procesos[0].historial[-1][0] + 1),
                 anchor="n",
                 font=("Arial", 8),
             )
 
     def mostrar_metricas(self, alg_nombre, wt, tat, reset=False):
-        """
-        • alg_nombre: texto (ej. "Round Robin (q=3)")
-        • wt, tat   : float
-        • reset     : True → vacía la tabla antes de añadir la 1.ª fila
-        """
         if reset:
-            self._limpiar_tree(self.tree_metricas)
+            self.limpiar_tree(self.tree_metricas)
 
         # buscar si ya existe una fila con ese algoritmo
         for iid in self.tree_metricas.get_children():
@@ -539,23 +527,24 @@ class SimuladorGUI:
             etiqueta = tk.Label(self.leyenda_frame, text=pid)
             etiqueta.pack(side="left", padx=(0, 10))
 
-    def limpiar_procesos(self):
+    def limpiar_procesos(self, silent=False):
+        # reset estado interno
         self.procesos, self.recursos, self.acciones = [], {}, []
 
+        # limpiar canvas y métricas
         self.canvas.delete("all")
+        self.limpiar_tree(self.tree_metricas)
 
-        for tree in (
-            self.tree_procesos,
-            self.tree_recursos,
-            self.tree_acciones,
-            self.tree_metricas,
-        ):
-            self._limpiar_tree(tree)
+        # limpiar tablas
+        for tree in (self.tree_procesos, self.tree_recursos, self.tree_acciones):
+            self.limpiar_tree(tree)
 
+        # limpiar leyenda
         for widget in self.leyenda_frame.winfo_children():
             widget.destroy()
 
-        messagebox.showinfo(
-            "Limpieza",
-            "Se han limpiado los procesos, recursos, acciones, métricas, canvas y leyenda.",
-        )
+        if not silent:
+            messagebox.showinfo(
+                "Limpieza",
+                "Se han limpiado los procesos, recursos, acciones, métricas, canvas y leyenda.",
+            )
