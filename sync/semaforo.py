@@ -1,4 +1,11 @@
 class SemaforoSimulador:
+    """
+    Semáforo contado:
+    – WAIT  : P() / down  (mantiene el recurso hasta SIGNAL)
+    – SIGNAL: V() / up
+    – READ / WRITE se permiten como accesos rápidos de 1 ciclo si se desea
+    """
+
     def __init__(self, procesos, recursos, acciones):
         self.procesos = {p.pid: p for p in procesos}
         self.recursos = recursos
@@ -6,37 +13,31 @@ class SemaforoSimulador:
         self.ciclo = 0
 
     def ejecutar(self):
-        tiempo_total = max(a.ciclo for a in self.acciones) + 10
-        while self.ciclo <= tiempo_total:
-            acciones_en_ciclo = [a for a in self.acciones if a.ciclo == self.ciclo]
+        tiempo_fin = max(a.ciclo for a in self.acciones) + 5
 
-            for accion in acciones_en_ciclo:
-                proceso = self.procesos[accion.pid]
-                recurso = self.recursos[accion.recurso]
+        while self.ciclo <= tiempo_fin:
+            # acciones programadas para este ciclo
+            for acc in (a for a in self.acciones if a.ciclo == self.ciclo):
+                proc = self.procesos[acc.pid]
+                rec = self.recursos[acc.recurso]
 
-                if accion.tipo in ["WAIT", "WRITE", "READ"]:
-                    if recurso.contador > 0:
-                        recurso.contador -= 1
-                        proceso.estado = "ACCESSED"
-                        proceso.historial.append((self.ciclo, "ACCESSED"))
-                    else:
-                        proceso.estado = "WAITING"
-                        proceso.historial.append((self.ciclo, "WAITING"))
-                        recurso.cola_espera.append(proceso)
+                if acc.tipo == "WAIT":  # P()
+                    rec.acquire(proc, self.ciclo, auto_release=False)
 
-                elif accion.tipo == "SIGNAL":
-                    recurso.contador += 1
-                    if recurso.cola_espera:
-                        siguiente = recurso.cola_espera.pop(0)
-                        siguiente.estado = "ACCESSED"
-                        siguiente.historial.append((self.ciclo, "ACCESSED"))
-                        recurso.contador -= 1
+                elif acc.tipo in ("READ", "WRITE"):  # acceso rápido
+                    rec.acquire(proc, self.ciclo, auto_release=True)
+
+                elif acc.tipo == "SIGNAL":  # V()
+                    rec.signal(self.ciclo)
+
+            # fin de ciclo: libera los auto_release y atiende cola
+            for rec in self.recursos.values():
+                rec.end_cycle(self.ciclo)
 
             self.ciclo += 1
 
+        # marca de finalización
         for p in self.procesos.values():
-            if p.estado == "ACCESSED":
-                p.estado = "DONE"
-                p.historial.append((self.ciclo, "DONE"))
+            p.marca(self.ciclo, "DONE")
 
         return list(self.procesos.values())

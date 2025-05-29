@@ -1,44 +1,33 @@
 class MutexSimulador:
+    """
+    Mutex clásico: READ y WRITE son accesos de 1 solo ciclo.
+    """
+
     def __init__(self, procesos, recursos, acciones):
         self.procesos = {p.pid: p for p in procesos}
         self.recursos = recursos
         self.acciones = acciones
         self.ciclo = 0
-        self.finalizados = set()
 
     def ejecutar(self):
-        tiempo_total = max(a.ciclo for a in self.acciones) + 10
-        while self.ciclo <= tiempo_total:
-            acciones_en_ciclo = [a for a in self.acciones if a.ciclo == self.ciclo]
+        tiempo_fin = max(a.ciclo for a in self.acciones) + 5
 
-            for accion in acciones_en_ciclo:
-                proceso = self.procesos[accion.pid]
-                recurso = self.recursos[accion.recurso]
+        while self.ciclo <= tiempo_fin:
+            # procesar acciones del ciclo
+            for acc in (a for a in self.acciones if a.ciclo == self.ciclo):
+                proc = self.procesos[acc.pid]
+                rec = self.recursos[acc.recurso]
+                if acc.tipo in ("READ", "WRITE"):
+                    rec.acquire(proc, self.ciclo, auto_release=True)
 
-                if accion.tipo in ["READ", "WRITE"]:
-                    if recurso.contador > 0:
-                        recurso.contador -= 1
-                        proceso.estado = "ACCESSED"
-                        proceso.historial.append((self.ciclo, "ACCESSED"))
-                    else:
-                        proceso.estado = "WAITING"
-                        proceso.historial.append((self.ciclo, "WAITING"))
-                        recurso.cola_espera.append(proceso)
-
-            # Liberar recursos al final del ciclo
-            for recurso in self.recursos.values():
-                if recurso.cola_espera:
-                    siguiente = recurso.cola_espera.pop(0)
-                    recurso.contador -= 1
-                    siguiente.estado = "ACCESSED"
-                    siguiente.historial.append((self.ciclo, "ACCESSED"))
+            # fin de ciclo: libera auto_release y despierta
+            for rec in self.recursos.values():
+                rec.end_cycle(self.ciclo)
 
             self.ciclo += 1
 
-        # Marcar procesos terminados
+        # marca de finalización
         for p in self.procesos.values():
-            if p.estado == "ACCESSED":
-                p.estado = "DONE"
-                p.historial.append((self.ciclo, "DONE"))
+            p.marca(self.ciclo, "DONE")
 
         return list(self.procesos.values())
