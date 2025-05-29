@@ -135,22 +135,6 @@ class SimuladorGUI:
         )
         self.simulacion_frame.pack(fill="x", pady=5)
 
-        # botones “seleccionar todos / limpiar”
-        btns_frame = tk.Frame(self.simulacion_frame, bg="#f4f4f4")
-        btns_frame.grid(row=0, columnspan=3, sticky="w", pady=(0, 6))
-        ttk.Button(
-            btns_frame,
-            text="Todos",
-            width=10,
-            command=lambda: [v.set(True) for v in self.algoritmo_vars.values()],
-        ).pack(side="left", padx=(0, 5))
-        ttk.Button(
-            btns_frame,
-            text="Ninguno",
-            width=10,
-            command=lambda: [v.set(False) for v in self.algoritmo_vars.values()],
-        ).pack(side="left")
-
         # checkbuttons en 2 columnas
         self.algoritmo_vars = {}
         for idx, nombre in enumerate(self.algoritmos):
@@ -253,7 +237,7 @@ class SimuladorGUI:
         ).pack()
         self.tree_recursos = self.crear_tree(
             self.frame_recursos,
-            columnas={"nombre": "Recurso", "contador": "Contador"},
+            columnas={"nombre": "Recurso", "capacidad": "Contador"},
             ancho=90,
         )
 
@@ -305,11 +289,13 @@ class SimuladorGUI:
         if modo == "calendarizacion":
             self.simulacion_frame.pack(fill="x", pady=10)
             self.sync_selector.pack_forget()
+            self.metricas_frame.pack()
             self.frame_acciones.pack_forget()
             self.frame_recursos.pack_forget()
         else:
             self.simulacion_frame.pack_forget()
             self.sync_selector.pack(fill="x", pady=10)
+            self.metricas_frame.pack_forget()
             self.frame_acciones.pack(side="left", padx=10)
             self.frame_recursos.pack(side="left", padx=10)
 
@@ -348,7 +334,7 @@ class SimuladorGUI:
                     self.limpiar_tree(self.tree_recursos)
                     for r in self.recursos.values():
                         self.tree_recursos.insert(
-                            "", "end", values=(r.nombre, r.contador)
+                            "", "end", values=(r.nombre, r.capacidad)
                         )
 
                 elif "acciones" in archivo:
@@ -510,34 +496,71 @@ class SimuladorGUI:
             )
 
     def dibujar_sync(self, procesos):
-        escala = 25
-        x = 10
-        y_offset = self.canvas.bbox("all")[3] + 30 if self.canvas.bbox("all") else 40
+        """
+        Visualización con SOLO dos estados:
+        · Rojo: el proceso aún no ha accedido nunca al recurso.
+        · Verde: el proceso consiguió ACCESSED al menos una vez
+                (y se queda verde para siempre).
+        """
+        escala_x, escala_y = 90, 40
+        margen_x, margen_y = 10, 40
 
+        # --- historial: dict[pid][ciclo] = estado ----------------------------
+        hist, max_ciclo = {}, 0
         for p in procesos:
-            for ciclo, estado in p.historial:
-                self.root.update()
-                color = "green" if estado == "ACCESSED" else "red"
-                self.canvas.create_rectangle(
-                    x, y_offset, x + escala, y_offset + 30, fill=color, outline="black"
-                )
-                self.canvas.create_text(
-                    x + escala // 2, y_offset + 15, text=p.pid, font=("Arial", 9)
-                )
-                self.canvas.create_text(
-                    x, y_offset + 40, text=str(ciclo), anchor="n", font=("Arial", 8)
-                )
-                x += escala
-                time.sleep(0.05)
+            hist[p.pid] = {c: e for c, e in p.historial}
+            if p.historial:
+                max_ciclo = max(max_ciclo, p.historial[-1][0])
 
-        if procesos and procesos[0].historial:
-            self.canvas.create_text(
-                x,
-                y_offset + 40,
-                text=str(procesos[0].historial[-1][0] + 1),
-                anchor="n",
-                font=("Arial", 8),
+        # --- dibujar rectángulos iniciales (todos ROJOS) ---------------------
+        self.canvas.delete("all")
+        pids = sorted(hist)
+        rect_id = {}
+        for i, pid in enumerate(pids):
+            x0 = margen_x + i * (escala_x + 4)
+            y0 = margen_y
+            rect_id[pid] = self.canvas.create_rectangle(
+                x0,
+                y0,
+                x0 + escala_x,
+                y0 + escala_y,
+                fill="red",
+                outline="black",
+                width=2,
             )
+            self.canvas.create_text(
+                x0 + escala_x // 2,
+                y0 + escala_y // 2,
+                text=pid,
+                font=("Arial", 12, "bold"),
+            )
+
+        lbl_ciclo = self.canvas.create_text(
+            margen_x,
+            margen_y + escala_y + 20,
+            anchor="w",
+            font=("Arial", 11, "bold"),
+            text="Ciclo: 0",
+        )
+
+        # --- bandera de “ya tuvo éxito” --------------------------------------
+        acceso_ok = {pid: False for pid in pids}
+
+        # --- animación -------------------------------------------------------
+        for ciclo in range(max_ciclo + 1):
+            for pid in pids:
+                if hist[pid].get(ciclo) == "ACCESSED":
+                    acceso_ok[pid] = True
+
+                color = "green" if acceso_ok[pid] else "red"
+                self.canvas.itemconfig(rect_id[pid], fill=color)
+
+            self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {ciclo}")
+            self.root.update()
+            time.sleep(0.5)  # ajusta la velocidad a tu gusto
+
+        # marca del último ciclo + 1
+        self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {max_ciclo + 1}")
 
     def mostrar_metricas(self, alg_nombre, wt, tat, reset=False):
         if reset:
