@@ -93,10 +93,24 @@ class SimuladorGUI:
 
         self.sync_tipo = tk.StringVar(value="mutex")
 
-        def set_sync(tipo):
-            self.sync_tipo.set(tipo)
-            mutex_btn.state(("pressed",) if tipo == "mutex" else ("!pressed",))
-            sema_btn.state(("pressed",) if tipo == "semaforo" else ("!pressed",))
+        def set_sync(tipo_deseado):
+            if (
+                tipo_deseado == "semaforo"
+                and self.recursos
+                and not self.hay_recurso_semaforo()
+            ):
+                messagebox.showwarning(
+                    "Configuración inválida",
+                    "Ningún recurso tiene contador mayor que 1.\n"
+                    "Para usar Semáforo necesita al menos un recurso con capacidad ≥ 2.",
+                )
+                return
+
+            self.sync_tipo.set(tipo_deseado)
+            mutex_btn.state(("pressed",) if tipo_deseado == "mutex" else ("!pressed",))
+            sema_btn.state(
+                ("pressed",) if tipo_deseado == "semaforo" else ("!pressed",)
+            )
 
         self.style.configure("Sync.TButton", relief="flat", padding=(14, 6))
         self.style.map(
@@ -464,7 +478,7 @@ class SimuladorGUI:
 
             if len(elemento) == 2:
                 pid, ciclo = elemento
-                ancho = escala
+                ancho = escala + 10
             else:
                 pid, inicio, dur = elemento
                 ciclo = inicio
@@ -497,22 +511,19 @@ class SimuladorGUI:
 
     def dibujar_sync(self, procesos):
         """
-        Visualización con SOLO dos estados:
-        · Rojo: el proceso aún no ha accedido nunca al recurso.
-        · Verde: el proceso consiguió ACCESSED al menos una vez
-                (y se queda verde para siempre).
+        Gris : el proceso aún no ha intentado acceder a ningún recurso.
+        Rojo : intentó acceder pero sigue en WAITING y nunca ha logrado ACCESSED.
+        Verde: ha conseguido ACCESSED al menos una vez.
         """
         escala_x, escala_y = 90, 40
         margen_x, margen_y = 10, 40
 
-        # --- historial: dict[pid][ciclo] = estado ----------------------------
         hist, max_ciclo = {}, 0
         for p in procesos:
             hist[p.pid] = {c: e for c, e in p.historial}
             if p.historial:
                 max_ciclo = max(max_ciclo, p.historial[-1][0])
 
-        # --- dibujar rectángulos iniciales (todos ROJOS) ---------------------
         self.canvas.delete("all")
         pids = sorted(hist)
         rect_id = {}
@@ -524,7 +535,7 @@ class SimuladorGUI:
                 y0,
                 x0 + escala_x,
                 y0 + escala_y,
-                fill="red",
+                fill="lightgray",
                 outline="black",
                 width=2,
             )
@@ -543,23 +554,28 @@ class SimuladorGUI:
             text="Ciclo: 0",
         )
 
-        # --- bandera de “ya tuvo éxito” --------------------------------------
         acceso_ok = {pid: False for pid in pids}
 
-        # --- animación -------------------------------------------------------
         for ciclo in range(max_ciclo + 1):
             for pid in pids:
-                if hist[pid].get(ciclo) == "ACCESSED":
+                estado = hist[pid].get(ciclo)
+
+                if estado == "ACCESSED":
                     acceso_ok[pid] = True
 
-                color = "green" if acceso_ok[pid] else "red"
+                if acceso_ok[pid]:
+                    color = "green"
+                elif estado == "WAITING":
+                    color = "red"
+                else:
+                    color = "lightgray"
+
                 self.canvas.itemconfig(rect_id[pid], fill=color)
 
             self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {ciclo}")
             self.root.update()
-            time.sleep(0.5)  # ajusta la velocidad a tu gusto
+            time.sleep(0.5)
 
-        # marca del último ciclo + 1
         self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {max_ciclo + 1}")
 
     def mostrar_metricas(self, alg_nombre, wt, tat, reset=False):
@@ -608,3 +624,9 @@ class SimuladorGUI:
                 "Limpieza",
                 "Se han limpiado los procesos, recursos, acciones, métricas, canvas y leyenda.",
             )
+
+    def hay_recurso_semaforo(self):
+        """
+        Devuelve True si al menos un recurso tiene capacidad ≥ 2.
+        """
+        return any(r.capacidad > 1 for r in self.recursos.values())
