@@ -10,54 +10,43 @@ class Recurso:
         self.en_uso = []
         self.cola_espera = deque()
 
-    def _wake_up(self, ciclo):
+    def _wake_up(self, ciclo_destino):
         """
-        Despierta procesos bloqueados siempre que haya cupo libre.
+        Ciclo en el que el proceso empezará realmente a usar el recurso.
+        Normalmente 'ciclo_actual + 1' cuando lo llamamos desde end_cycle.
         """
         while self.disponibles > 0 and self.cola_espera:
             proc, auto_rel = self.cola_espera.popleft()
             self.disponibles -= 1
             self.en_uso.append((proc, auto_rel))
-            proc.marca(ciclo, "ACCESSED")
+            proc.marca(ciclo_destino, f"ACCESSED_{self.nombre}")
 
     def acquire(self, proc, ciclo, auto_release=True):
-        """
-        Intenta tomar el recurso.
-        auto_release=True  → el recurso se devolverá automáticamente al final del ciclo.
-        """
+
         if self.disponibles > 0:
             self.disponibles -= 1
             self.en_uso.append((proc, auto_release))
-            proc.marca(ciclo, "ACCESSED")
+            proc.marca(ciclo, f"ACCESSED_{self.nombre}")
         else:
-            proc.marca(ciclo, "WAITING")
+            proc.marca(ciclo, f"WAITING_{self.nombre}")
             self.cola_espera.append((proc, auto_release))
 
     def signal(self, ciclo):
-        """
-        SIGNAL (V) de un semáforo: libera un cupo y despierta a quien corresponda.
-        """
+
         self.disponibles += 1
         self._wake_up(ciclo)
 
-    def end_cycle(self, ciclo):
-        """
-        Al cerrar un ciclo:
-        – Libera los accesos marcados como auto_release.
-        – Despierta procesos en espera si quedó cupo.
-        """
+    def end_cycle(self, ciclo_actual):
+        # libera los accesos de 1 ciclo
         liberados = [(p, a) for (p, a) in self.en_uso if a]
         for p, _ in liberados:
-            self.en_uso.remove((p, True))  # elimina sólo la tupla con auto_release=True
+            self.en_uso.remove((p, True))
             self.disponibles += 1
-        self._wake_up(ciclo)
+        # despierta *para el ciclo siguiente*
+        self._wake_up(ciclo_actual + 1)
 
 
 class Accion:
-    """
-    tipo : READ | WRITE | WAIT | SIGNAL
-    ciclo: instante en que se ejecuta la acción
-    """
 
     def __init__(self, pid, tipo, recurso, ciclo):
         self.pid = pid

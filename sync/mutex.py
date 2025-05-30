@@ -10,17 +10,27 @@ class MutexSimulador:
         self.ciclo = 0
 
     def ejecutar(self):
-        tiempo_fin = max(a.ciclo for a in self.acciones) + 5
+        # ordenar las acciones por ciclo
+        acciones = sorted(self.acciones, key=lambda a: a.ciclo)
+        idx = 0  # siguiente acción pendiente
 
-        while self.ciclo <= tiempo_fin:
-            # procesar acciones del ciclo
-            for acc in (a for a in self.acciones if a.ciclo == self.ciclo):
+        # se repite mientras queden acciones SIN despachar
+        #   o algún recurso tenga procesos usando o esperando
+        cond_recursos = lambda: any(
+            r.en_uso or r.cola_espera for r in self.recursos.values()
+        )
+
+        while idx < len(acciones) or cond_recursos():
+            # 1) despachar todas las acciones programadas para este ciclo
+            while idx < len(acciones) and acciones[idx].ciclo == self.ciclo:
+                acc = acciones[idx]
+                idx += 1
                 proc = self.procesos[acc.pid]
                 rec = self.recursos[acc.recurso]
                 if acc.tipo in ("READ", "WRITE"):
                     rec.acquire(proc, self.ciclo, auto_release=True)
 
-            # fin de ciclo: libera auto_release y despierta
+            # 2) fin de ciclo: libera y despierta
             for rec in self.recursos.values():
                 rec.end_cycle(self.ciclo)
 
@@ -29,5 +39,4 @@ class MutexSimulador:
         # marca de finalización
         for p in self.procesos.values():
             p.marca(self.ciclo, "DONE")
-
         return list(self.procesos.values())
