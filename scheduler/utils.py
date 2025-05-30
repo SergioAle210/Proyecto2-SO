@@ -36,7 +36,7 @@ def leer_procesos(path):
 def calcular_metricas(procesos):
     """
     Calcula el tiempo de espera promedio y turnaround time promedio.
-    - Waiting Time = Start Time - Arrival Time
+    - Waiting Time = Turnaround Time - Burst Time
     - Turnaround Time = End Time - Arrival Time
     """
     total_wt = 0
