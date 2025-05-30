@@ -1,3 +1,4 @@
+import colorsys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import time
@@ -79,61 +80,10 @@ class SimuladorGUI:
 
         self.modo_notebook.bind("<<NotebookTabChanged>>", on_tab_change)
 
-        # selector de sincronización
-        self.sync_selector = tk.Frame(self.left_panel)
-        self.sync_tipo = tk.StringVar(value="mutex")
-        self.sync_selector = ttk.LabelFrame(
-            self.left_panel, text="Tipo de sincronización"
-        )
-        self.sync_selector.pack(fill="x", pady=5)
-
-        # sub-contenedor centrado ─
-        sync_center = tk.Frame(self.sync_selector, bg="#f4f4f4")
-        sync_center.pack(pady=4)
-
-        self.sync_tipo = tk.StringVar(value="mutex")
-
-        def set_sync(tipo_deseado):
-            if (
-                tipo_deseado == "semaforo"
-                and self.recursos
-                and not self.hay_recurso_semaforo()
-            ):
-                messagebox.showwarning(
-                    "Configuración inválida",
-                    "Ningún recurso tiene contador mayor que 1.\n"
-                    "Para usar Semáforo necesita al menos un recurso con capacidad ≥ 2.",
-                )
-                return
-
-            self.sync_tipo.set(tipo_deseado)
-            mutex_btn.state(("pressed",) if tipo_deseado == "mutex" else ("!pressed",))
-            sema_btn.state(
-                ("pressed",) if tipo_deseado == "semaforo" else ("!pressed",)
-            )
-
         self.style.configure("Sync.TButton", relief="flat", padding=(14, 6))
         self.style.map(
             "Sync.TButton", background=[("pressed", "#d0eaff"), ("!pressed", "#ffffff")]
         )
-
-        mutex_btn = ttk.Button(
-            sync_center,
-            text="Mutex",
-            style="Sync.TButton",
-            command=lambda: set_sync("mutex"),
-        )
-        sema_btn = ttk.Button(
-            sync_center,
-            text="Semáforo",
-            style="Sync.TButton",
-            command=lambda: set_sync("semaforo"),
-        )
-
-        mutex_btn.pack(side="left", padx=(0, 4))
-        sema_btn.pack(side="left", padx=(4, 0))
-
-        set_sync("mutex")
 
         # algoritmos de calendarización ─
         self.algoritmos = {
@@ -302,14 +252,14 @@ class SimuladorGUI:
         modo = self.modo_var.get()
         if modo == "calendarizacion":
             self.simulacion_frame.pack(fill="x", pady=10)
-            self.sync_selector.pack_forget()
             self.metricas_frame.pack()
+            self.leyenda_frame.pack()
             self.frame_acciones.pack_forget()
             self.frame_recursos.pack_forget()
         else:
             self.simulacion_frame.pack_forget()
-            self.sync_selector.pack(fill="x", pady=10)
             self.metricas_frame.pack_forget()
+            self.leyenda_frame.pack_forget()
             self.frame_acciones.pack(side="left", padx=10)
             self.frame_recursos.pack(side="left", padx=10)
 
@@ -386,7 +336,10 @@ class SimuladorGUI:
         )
 
     def generar_color(self):
-        return f"#{random.randint(0,255):02x}{random.randint(0,255):02x}{random.randint(0,255):02x}"
+        r = random.randint(128, 255)
+        g = random.randint(128, 255)
+        b = random.randint(128, 255)
+        return f"#{r:02x}{g:02x}{b:02x}"
 
     def simular(self):
         self.canvas.delete("all")
@@ -431,7 +384,7 @@ class SimuladorGUI:
                     procesos_res, nombre_algoritmo=nombre, timeline_override=timeline
                 )
 
-                # ─── métricas ───
+                # métricas
                 avg_wt, avg_tat = calcular_metricas(procesos_res)
                 self.mostrar_metricas(nombre_mostrado, avg_wt, avg_tat, reset=primera)
                 primera = False
@@ -442,13 +395,12 @@ class SimuladorGUI:
                     "Error", "Faltan procesos, recursos o acciones para simular."
                 )
                 return
-            tipo = self.sync_tipo.get()
-            if tipo == "mutex":
-                simulador = MutexSimulador(self.procesos, self.recursos, self.acciones)
-            else:
+            if self.usar_semaforo():
                 simulador = SemaforoSimulador(
                     self.procesos, self.recursos, self.acciones
                 )
+            else:
+                simulador = MutexSimulador(self.procesos, self.recursos, self.acciones)
             resultado = simulador.ejecutar()
             self.dibujar_sync(resultado)
 
@@ -509,74 +461,115 @@ class SimuladorGUI:
                 x, y_offset + 40, text=str(ult_ciclo), anchor="n", font=("Arial", 8)
             )
 
-    def dibujar_sync(self, procesos):
+    def dibujar_sync(self, procesos, tam=30, margen=12, delay=0.4):
         """
-        Gris : el proceso aún no ha intentado acceder a ningún recurso.
-        Rojo : intentó acceder pero sigue en WAITING y nunca ha logrado ACCESSED.
-        Verde: ha conseguido ACCESSED al menos una vez.
+        Tabla dinámica Proceso × Ciclo con texto del recurso en cada celda.
         """
-        escala_x, escala_y = 90, 40
-        margen_x, margen_y = 10, 40
-
+        offset = 10
+        # 1. Historial
         hist, max_ciclo = {}, 0
         for p in procesos:
             hist[p.pid] = {c: e for c, e in p.historial}
             if p.historial:
                 max_ciclo = max(max_ciclo, p.historial[-1][0])
 
-        self.canvas.delete("all")
         pids = sorted(hist)
-        rect_id = {}
-        for i, pid in enumerate(pids):
-            x0 = margen_x + i * (escala_x + 4)
-            y0 = margen_y
-            rect_id[pid] = self.canvas.create_rectangle(
-                x0,
-                y0,
-                x0 + escala_x,
-                y0 + escala_y,
-                fill="lightgray",
-                outline="black",
-                width=2,
-            )
+        nrows = len(pids)
+        ncols = max_ciclo + 1  # ciclos 0..max
+
+        # 2. Canvas
+        self.canvas.delete("all")
+        ancho = margen * 3 + tam * ncols
+        alto = margen * 3 + tam * nrows + 30
+        self.canvas.config(scrollregion=(0, 0, ancho, max(alto, 2000)))
+
+        # Encabezados de ciclo
+        for col in range(ncols):
+            x = margen * 2 + offset + col * tam + tam // 2
+            self.canvas.create_text(x, margen, text=str(col), font=("Arial", 9, "bold"))
+
+        # 3. Malla inicial gris + ids
+        cell_rect = {pid: {} for pid in pids}
+        cell_txt = {pid: {} for pid in pids}
+
+        for row, pid in enumerate(pids):
+            y = margen * 2 + row * tam
             self.canvas.create_text(
-                x0 + escala_x // 2,
-                y0 + escala_y // 2,
-                text=pid,
-                font=("Arial", 12, "bold"),
+                margen, y + tam // 2, text=pid, anchor="w", font=("Arial", 10, "bold")
             )
 
+            for col in range(ncols):
+                x = margen * 2 + offset + col * tam
+                rid = self.canvas.create_rectangle(
+                    x, y, x + tam, y + tam, fill="lightgray", outline="black", width=1
+                )
+                tid = self.canvas.create_text(
+                    x + tam // 2,
+                    y + tam // 2,
+                    text="",
+                    font=("Arial", 8, "bold"),
+                    fill="white",
+                )
+                cell_rect[pid][col] = rid
+                cell_txt[pid][col] = tid
+
+        # Rótulo ciclo
         lbl_ciclo = self.canvas.create_text(
-            margen_x,
-            margen_y + escala_y + 20,
+            margen + offset,
+            margen * 2 + nrows * tam + 15,
             anchor="w",
             font=("Arial", 11, "bold"),
             text="Ciclo: 0",
         )
 
-        acceso_ok = {pid: False for pid in pids}
+        # 4. Animación
+        en_espera = {pid: False for pid in pids}
+        recurso_en_espera = {pid: "" for pid in pids}  # NUEVO
 
-        for ciclo in range(max_ciclo + 1):
+        for ciclo in range(ncols):
             for pid in pids:
-                estado = hist[pid].get(ciclo)
+                raw = hist[pid].get(ciclo)  # p.e. 'WAITING_R2'
+                if raw and "_" in raw:
+                    estado_base, recurso = raw.split("_", 1)
+                else:
+                    estado_base = raw  # puede ser 'WAITING', 'ACCESSED', 'DONE' o None
+                    recurso = ""
 
-                if estado == "ACCESSED":
-                    acceso_ok[pid] = True
+                # actualizar banderas
+                if estado_base == "WAITING":
+                    en_espera[pid] = True
+                    recurso_en_espera[pid] = recurso
+                elif estado_base == "ACCESSED":
+                    en_espera[pid] = False
+                    recurso_en_espera[pid] = ""
 
-                if acceso_ok[pid]:
+                # color
+                if estado_base == "ACCESSED":
                     color = "green"
-                elif estado == "WAITING":
+                elif en_espera[pid]:
                     color = "red"
                 else:
                     color = "lightgray"
 
-                self.canvas.itemconfig(rect_id[pid], fill=color)
+                # texto a mostrar
+                if estado_base:  # hubo evento este ciclo
+                    texto = recurso
+                elif en_espera[pid]:  # sigue esperando
+                    texto = recurso_en_espera[pid]
+                else:
+                    texto = ""
 
-            self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {ciclo}")
+                # aplicar en canvas
+                self.canvas.itemconfig(cell_rect[pid][ciclo], fill=color)
+                txt_color = "black" if color == "lightgray" else "white"
+                self.canvas.itemconfig(cell_txt[pid][ciclo], text=texto, fill=txt_color)
+
+            self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {ciclo + 1}")
             self.root.update()
-            time.sleep(0.5)
+            time.sleep(delay)
 
-        self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {max_ciclo + 1}")
+        # marca final
+        self.canvas.itemconfig(lbl_ciclo, text=f"Ciclo: {ncols}")
 
     def mostrar_metricas(self, alg_nombre, wt, tat, reset=False):
         if reset:
@@ -628,5 +621,12 @@ class SimuladorGUI:
     def hay_recurso_semaforo(self):
         """
         Devuelve True si al menos un recurso tiene capacidad ≥ 2.
+        """
+        return any(r.capacidad > 1 for r in self.recursos.values())
+
+    def usar_semaforo(self):
+        """
+        True  -> hay al menos un recurso con contador > 1  → Semáforo
+        False -> todos los recursos valen 1                → Mutex
         """
         return any(r.capacidad > 1 for r in self.recursos.values())
