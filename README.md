@@ -164,6 +164,7 @@ P2, WRITE, R2, 3
 - Asegúrate de que los archivos `.txt` estén bien formateados.
 - Para sincronización, es obligatorio cargar procesos, recursos y acciones.
 - La cantidad de recursos debe coincidir con los nombres utilizados en las acciones.
+- El nombre de los archivos .txt tienen que empezar con procesos, recursos y acciones para cargar correctamente el archivo correcto.
 
 ---
 
