@@ -117,6 +117,8 @@ class SimuladorGUI:
         self.quantum_frame.grid(row=4, column=0, columnspan=2, pady=(8, 0), sticky="w")
         tk.Label(self.quantum_frame, text="Quantum:", bg="#f4f4f4").pack(side="left")
         self.quantum_entry = tk.Entry(self.quantum_frame, width=5)
+        vcmd = (self.root.register(self.validate_quantum), "%P")
+        self.quantum_entry.config(validate="key", validatecommand=vcmd)
         self.quantum_entry.insert(0, "3")
         self.quantum_entry.pack(side="left")
         self.quantum_frame.grid_remove()  # se oculta al inicio
@@ -630,3 +632,10 @@ class SimuladorGUI:
         False -> todos los recursos valen 1                → Mutex
         """
         return any(r.capacidad > 1 for r in self.recursos.values())
+
+    def validate_quantum(self, proposed):
+        """
+        Solo permite que en el Entry queden cadenas vacías (para borrar)
+        o cadenas formadas únicamente por dígitos.
+        """
+        return proposed == "" or proposed.isdigit()
